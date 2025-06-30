@@ -1,6 +1,17 @@
 from typing import List, Optional
 from dataclasses import dataclass, asdict
 import json
+from core.interfaces import (
+    LeadershipInterface,
+    LegislativeInterface,
+    JudicialInterface,
+    MilitaryInterface,
+    IntelligenceInterface,
+    EconomicInterface,
+    InfrastructureInterface,
+    ReligiousInterface,
+    CivicRepresentationInterface
+)
 
 @dataclass
 class RoleConfig:
@@ -11,22 +22,10 @@ class RoleConfig:
     selection_required: bool
     max_holders: int
     innovation_points: int
-    interface_class: Optional['Type[RoleInterface]']  # String annotation to avoid importing RoleInterface
+    interface_class: Optional['type[core.interfaces.RoleInterface]']
 
 def get_role_configs():
-    """Define role configurations, importing interface classes here to avoid circular imports with interfaces.py."""
-    from interfaces import (
-        RoleInterface,
-        LeadershipInterface,
-        LegislativeInterface,
-        JudicialInterface,
-        MilitaryInterface,
-        IntelligenceInterface,
-        EconomicInterface,
-        InfrastructureInterface,
-        ReligiousInterface,
-        CivicRepresentationInterface
-    )
+    """Define role configurations."""
     return {
         "leadership": RoleConfig(
             key="leadership",
@@ -137,7 +136,7 @@ def save_configs_to_json(filename: str):
     configs = {
         key: {
             k: v for k, v in asdict(config).items()
-            if k != 'interface_class'  # Exclude non-serializable field
+            if k != 'interface_class'
         }
         for key, config in ROLE_CONFIGS.items()
     }
@@ -145,19 +144,7 @@ def save_configs_to_json(filename: str):
         json.dump(configs, f, indent=2)
 
 def load_configs_from_json(filename: str):
-    """Load ROLE_CONFIGS from a JSON file, mapping interface_class separately."""
-    from interfaces import (
-        RoleInterface,
-        LeadershipInterface,
-        LegislativeInterface,
-        JudicialInterface,
-        MilitaryInterface,
-        IntelligenceInterface,
-        EconomicInterface,
-        InfrastructureInterface,
-        ReligiousInterface,
-        CivicRepresentationInterface
-    )
+    """Load ROLE_CONFIGS from a JSON file."""
     with open(filename, 'r') as f:
         data = json.load(f)
     interface_map = {

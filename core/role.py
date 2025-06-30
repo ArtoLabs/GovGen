@@ -1,5 +1,5 @@
 from typing import Optional, List
-from roles_config import ROLE_CONFIGS
+from core.roles_config import ROLE_CONFIGS
 
 class Role:
     def __init__(

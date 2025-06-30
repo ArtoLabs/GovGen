@@ -1,8 +1,8 @@
 from typing import Dict, List, Set, Tuple
-from role import get_role
-from player import Player
-from government_types import GovernmentType
-from roles_config import ROLE_CONFIGS
+from core.role import get_role
+from world.player import Player
+from core.government_types import GovernmentType
+from core.roles_config import ROLE_CONFIGS
 
 
 def get_role_limits() -> Dict[str, int]:

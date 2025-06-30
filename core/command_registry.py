@@ -23,6 +23,8 @@ class CommandRegistry:
 CommandRegistry.register("assign_role", ["Chieftainship"])
 CommandRegistry.register("set_method", ["Chieftainship"])
 CommandRegistry.register("remove_role", ["Chieftainship"])
+CommandRegistry.register("start_nominations", [])  # No innovations required
+CommandRegistry.register("close_nominations", [])  # No innovations required
 CommandRegistry.register("propose_law", ["Law Code", "Writing"])  # LegislativeInterface example
 # Future commands can be added here, e.g.:
 # CommandRegistry.register("declare_war", ["Military Command"])  # MilitaryInterface

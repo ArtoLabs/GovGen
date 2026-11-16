@@ -1,0 +1,134 @@
+{
+  "key": "chiefdom",
+  "name": "Chiefdom",
+  "age": "stone",
+  "description": "A lasting chief chosen and held to account by a council of elders. Balanced, but the chief needs the elders' support.",
+  "requires": [],
+  "reformed_by": {
+    "method": "council_vote",
+    "council": "Elder"
+  },
+  "max_offices_per_player": 1,
+  "member_interfaces": [
+    "infrastructure"
+  ],
+  "member_points": 1,
+  "carry_over": {
+    "Clan Leader": "Chieftain",
+    "Spirit Keeper": "Priest",
+    "Sacred Chief": "Chieftain"
+  },
+  "offices": {
+    "Chieftain": {
+      "description": "A lasting leader with real authority over the community and its stores.",
+      "seats": 1,
+      "interfaces": [
+        "leadership",
+        "economic"
+      ],
+      "points": 6,
+      "selected_by": {
+        "method": "council_vote",
+        "council": "Elder",
+        "fallback": "tribe_vote"
+      },
+      "removed_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      }
+    },
+    "Elder": {
+      "description": "Members of the council that keeps custom, judges disputes, and chooses the Chieftain.",
+      "seats": 3,
+      "interfaces": [
+        "judicial",
+        "legislative"
+      ],
+      "points": 3,
+      "selected_by": {
+        "method": "tribe_vote"
+      },
+      "removed_by": {
+        "method": "tribe_vote"
+      }
+    },
+    "Priest": {
+      "description": "Leads the community's rituals and keeps its sacred places.",
+      "seats": 1,
+      "interfaces": [
+        "religious",
+        "civic_representation"
+      ],
+      "points": 3,
+      "selected_by": {
+        "method": "divine_sign",
+        "chance": 0.3
+      },
+      "removed_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      }
+    },
+    "War Leader": {
+      "description": "Leads the community's defense and scouting.",
+      "seats": 1,
+      "interfaces": [
+        "military",
+        "intelligence"
+      ],
+      "points": 3,
+      "selected_by": {
+        "method": "appointment",
+        "appointer": "Chieftain"
+      },
+      "removed_by": {
+        "method": "appointment",
+        "appointer": "Chieftain"
+      },
+      "requires": [
+        "Warrior Command"
+      ]
+    },
+    "Steward": {
+      "description": "Manages the community's stored food and goods.",
+      "seats": 1,
+      "interfaces": [
+        "economic"
+      ],
+      "points": 3,
+      "selected_by": {
+        "method": "appointment",
+        "appointer": "Chieftain"
+      },
+      "removed_by": {
+        "method": "appointment",
+        "appointer": "Chieftain"
+      },
+      "requires": [
+        "Centralized Authority"
+      ]
+    }
+  },
+  "statuses": {
+    "Outcast": {
+      "description": "Cast out of the community. Holds no office and has no voice.",
+      "requires": [
+        "Ostracism"
+      ],
+      "granted_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      },
+      "revoked_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      },
+      "effects": [
+        "loses_office",
+        "cannot_hold_office",
+        "cannot_vote",
+        "no_member_interfaces"
+      ]
+    }
+  }
+}

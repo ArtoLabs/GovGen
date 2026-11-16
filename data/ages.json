@@ -1,0 +1,26 @@
+{
+  "_comment": "Ages in order. An age is reached once every innovation in 'requires' is discovered (and all earlier ages are reached). Innovations in data/innovations/<age>.json can only be researched once their age is reached, so each age's 'requires' must come from earlier ages. 'government_on_arrival': when the society enters the age, its government changes by itself into the first of these (data/governments keys) whose own 'requires' are all researched, else the last one; nobody votes or decides. Office holders carry over as the new government's 'carry_over' says; new offices start empty. So the research done before the age arrives picks the government (Tribal Council: a Village Council). Within an age, changing to another form of that age is a reform.",
+  "ages": [
+    {
+      "key": "tribal",
+      "name": "Tribal Age",
+      "description": "Small kin groups that move with the seasons. Leadership is by influence and agreement.",
+      "requires": [],
+      "starting_innovations": ["Fire", "Language", "Tribalism", "Hierarchy"]
+    },
+    {
+      "key": "stone",
+      "name": "Stone Age",
+      "description": "Settled villages, farming, and chiefs with lasting authority.",
+      "requires": ["Sustenance Gardening", "Chieftainship"],
+      "government_on_arrival": ["village_council", "chiefdom"]
+    },
+    {
+      "key": "metal",
+      "name": "Metal Age",
+      "description": "Metal tools, writing, trade networks, and the first states.",
+      "requires": ["Metalworking"],
+      "government_on_arrival": ["kingdom", "city_state"]
+    }
+  ]
+}

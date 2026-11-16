@@ -1,56 +1,30 @@
-from typing import Dict, List, Set, Tuple
-from core.role import get_role
-from world.player import Player
-from core.government_types import GovernmentType
-from core.roles_config import ROLE_CONFIGS
+"""Eligibility rules shared by every way of filling an office."""
+from typing import List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.government import Government
+    from world.player import Player
 
 
-def get_role_limits() -> Dict[str, int]:
-    return {config.key: config.max_holders for config in ROLE_CONFIGS.values()}
-
-
-def is_role_unlocked(role_id: str, discovered: Set[str]) -> Tuple[bool, List[str]]:
-    role = get_role(role_id)
-    if not role:
-        return False, [f"Key '{role_id}' does not exist"]
-    return True, []
-
-
-def can_assign_role(role_id: str, player: Player, assignments: Dict[str, List[Player]], discovered: Set[str],
-                    government_type: GovernmentType) -> Tuple[bool, List[str]]:
-    reasons = []
-
-    if role_id in government_type.role_mappings:
-        title_reqs = government_type.title_requirements.get(role_id, {})
-        missing = [req for req in title_reqs.get("innovations", []) if req not in discovered]
-        if missing:
-            reasons.append(f"Title '{role_id}' requires missing innovations: {', '.join(missing)}")
-            return False, reasons
-        max_holders = title_reqs.get("max_holders", 1)
-        current_holders = len(assignments.get(role_id, []))
-        if current_holders >= max_holders:
-            reasons.append(f"Maximum holders ({max_holders}) for '{role_id}' already reached")
-            return False, reasons
-        any_valid = False
-        for base_role in government_type.role_mappings[role_id]:
-            unlocked, base_reasons = is_role_unlocked(base_role, discovered)
-            if unlocked:
-                any_valid = True
-            else:
-                reasons.extend(base_reasons)
-        if not any_valid:
-            reasons.append(f"No base roles for '{role_id}' are valid")
-            return False, reasons
-        return True, []
-
-    unlocked, base_reasons = is_role_unlocked(role_id, discovered)
-    if not unlocked:
-        reasons.extend(base_reasons)
-        return False, reasons
-    role_limits = get_role_limits()
-    max_holders = role_limits.get(role_id, 1)
-    current_holders = len(assignments.get(role_id, []))
-    if current_holders >= max_holders:
-        reasons.append(f"Maximum holders ({max_holders}) for '{role_id}' already reached")
-        return False, reasons
+def can_hold_office(government: 'Government', office_name: str, player: 'Player',
+                    ignore_seat_limit: bool = False) -> Tuple[bool, List[str]]:
+    gov_type = government.government_type
+    office = gov_type.offices.get(office_name)
+    if office is None:
+        return False, [f"'{office_name}' is not an office in a {gov_type.name} government"]
+    missing = [req for req in office.requires if req not in government.innovation_pool.discovered]
+    if missing:
+        return False, [f"'{office_name}' requires {', '.join(missing)}"]
+    if government.has_effect(player, "cannot_hold_office"):
+        return False, [f"{player.name} may not hold office"]
+    if not government.of_age(player, "politics"):
+        return False, [f"{player.name} is too young to hold office"]
+    holders = government.get_role_holders(office_name)
+    if player in holders:
+        return False, [f"{player.name} already holds '{office_name}'"]
+    if not ignore_seat_limit and len(holders) >= office.seats:
+        return False, [f"all {office.seats} '{office_name}' seat(s) are filled"]
+    held = government.offices_of(player)
+    if len(held) >= gov_type.max_offices_per_player:
+        return False, [f"{player.name} already holds {', '.join(held)} (limit {gov_type.max_offices_per_player})"]
     return True, []

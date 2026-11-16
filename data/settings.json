@@ -1,0 +1,13 @@
+{
+  "_comment": "Game settings. Command-line options (python -m core.main --help) override these. 'playback_speeds': the speeds the speed key cycles through (0 = as fast as possible).",
+  "npc_detail": "full",
+  "seed": null,
+  "real_seconds_per_game_year": 300,
+  "playback_speed": 1,
+  "playback_speeds": [
+    1,
+    5,
+    20,
+    0
+  ]
+}

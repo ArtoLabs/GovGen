@@ -1,0 +1,19 @@
+{
+  "_comment": "The natural world. Temperatures in degrees Celsius: each season's average, swinging warmer by day and colder by night.",
+  "climate": {
+    "seasons": {
+      "Spring": 12,
+      "Summer": 24,
+      "Autumn": 11,
+      "Winter": -2
+    },
+    "day_night_swing": 8,
+    "comfort": 18
+  },
+  "fire": {
+    "_comment": "Air temperature by the communal fire, plus a little per point of the Firekeeper's firekeeping skill. 'resting_warmth': someone sleeping, eating or resting at camp by a burning fire feels at most this many degrees above comfort (0: the fire only keeps the cold off them, so warmth holds steady). Getting warm takes sitting by the fire (Warm up, under E), which is what makes the tribe content with its fire (society.json quality 'fire').",
+    "resting_warmth": 0,
+    "temperature": 22,
+    "per_skill": 0.6
+  }
+}

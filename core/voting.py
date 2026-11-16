@@ -1,316 +1,240 @@
-from abc import ABC, abstractmethod
-from typing import Dict, List, Set, Optional
-from world.player import Player
-from core.government import Government
-from utils.messages import Messages
+"""Ballots: elections to fill offices and yes/no motions. All periods run on the game clock (hours)."""
 import random
-from collections import defaultdict
+from typing import Any, Callable, Dict, List, Optional
+from world.player import Player
+from utils.logging_config import logger
 
-class VotingSystem(ABC):
-    def __init__(
-        self,
-        role: str,
-        force_vote: bool = True,
-        nomination_control: str = "time_based",
-        nomination_duration: int = 1,
-        nomination_starter_role: Optional[str] = None,
-        nomination_closer_role: Optional[str] = None,
-        seat_number: Optional[int] = None,
-    ):
-        self.seat_number = seat_number
-        self.role = role
-        self.force_vote = force_vote
-        self.nomination_control = nomination_control  # "time_based" or "command_based"
-        self.nomination_duration = nomination_duration  # Years for time-based
-        self.nomination_starter_role = nomination_starter_role
-        self.nomination_closer_role = nomination_closer_role
-        self.nomination_method = "open"
-        self.government: Optional[Government] = None
-        self.nominations: Dict[str, List[str]] = {role: []}
-        self.votes: Dict[Player, str] = {}
-        self.voting_active = False
+
+class Ballot:
+    """State shared by elections and motions: who may vote, the votes cast, and when voting closes."""
+    is_nomination_open = False
+    ranked = False  # True if voters rank several choices instead of picking one
+
+    def __init__(self, key: str, label: str):
+        self.key = key
+        self.label = label
         self.candidates: List[str] = []
-        self.players: List[Player] = []
-        self.is_nomination_open = False
-        self.nomination_start_year: Optional[int] = None
-        self.voting_start_year: Optional[int] = None  # Track when voting starts
+        self.votes: Dict[str, List[str]] = {}
+        self.voting_closes_at: Optional[int] = None
 
-    def set_nomination_method(self, method: str):
-        self.nomination_method = method
+    def start_vote(self, electorate: List[Player], candidates: List[str], now: int, duration_hours: int):
+        self.candidates = list(candidates)
+        self.votes = {p.name: [] for p in electorate}
+        self.voting_closes_at = now + duration_hours
+        logger.debug(f"Voting started: {self.label} candidates={self.candidates} electorate={list(self.votes)}")
 
-    def start_nominations(self, current_year: int):
-        """Start the nomination phase."""
-        if self.is_nomination_open:
-            raise ValueError(f"Nominations for {self.role} are already open")
-        if self.nomination_control == "command_based" and not self.nomination_starter_role:
-            raise ValueError(f"No starter role defined for {self.role}")
-        self.is_nomination_open = True
-        self.nomination_start_year = current_year
-        self.nominations[self.role] = []
-
-    def close_nominations(self):
-        """Close the nomination phase and prepare for voting or direct assignment."""
-        if not self.is_nomination_open:
-            raise ValueError(f"Nominations for {self.role} are not open")
-        self.is_nomination_open = False
-        self.nomination_start_year = None
-
-    def is_nomination_period_over(self, current_year: int) -> bool:
-        """Check if the time-based nomination period has ended."""
-        if self.nomination_control != "time_based" or not self.is_nomination_open:
-            return False
-        if self.nomination_start_year is None:
-            return False
-        return (current_year - self.nomination_start_year) >= self.nomination_duration
-
-    def nominate(self, player: Player, candidate_name: str):
-        if not self.is_nomination_open:
-            raise ValueError(f"Nominations for {self.role} are not open")
-        if self.voting_active:
-            raise ValueError("Cannot nominate while voting is active")
-        if self.nomination_method == "self_appointed" and player.name != candidate_name:
-            raise ValueError("Only self-nomination is allowed")
-        if self.nomination_method == "appointed" and not self.can_appoint(player, self.role):
-            raise ValueError(f"{player.name} is not authorized to nominate for {self.role}")
-        if candidate_name in self.nominations[self.role]:
-            raise ValueError(f"{candidate_name} is already nominated for {self.role}")
-        if candidate_name not in [p.name for p in self.government.players]:
-            raise ValueError(f"{candidate_name} is not a valid player")
-        if self.government.is_player_assigned(candidate_name, self.role):
-            raise ValueError(f"{candidate_name} is already assigned to {self.role}")
-        self.nominations[self.role].append(candidate_name)
-
-    def can_start_nominations(self, player: Player) -> bool:
-        """Check if a player can start nominations (for command-based)."""
-        if self.nomination_control != "command_based" or not self.nomination_starter_role:
-            return False
-        return player in self.government.assignments.get(self.nomination_starter_role, [])
-
-    def can_close_nominations(self, player: Player) -> bool:
-        """Check if a player can close nominations (for command-based)."""
-        if self.nomination_control != "command_based" or not self.nomination_closer_role:
-            return False
-        return player in self.government.assignments.get(self.nomination_closer_role, [])
-
-    def can_appoint(self, player: Player, role: str) -> bool:
-        """Check if a player can appoint nominees for a role."""
-        if self.nomination_method != "appointed":
-            return False
-        appointer = self.government.government_type.title_requirements.get(role, {}).get("appointer")
-        if appointer == "anyone":
-            return True
-        if not appointer:
-            return False
-        return player in self.government.assignments.get(appointer, [])
-
-    def can_end_turn(self, player: Player) -> bool:
-        return not self.force_vote or player in self.votes
-
-    def start_vote(self, players: List[Player], candidates: List[str]):
-        self.voting_active = True
-        self.candidates = candidates
-        self.players = players
-        self.voting_start_year = self.government.sim.current_year  # Set voting start year
+    def choices(self) -> List[str]:
+        """What a voter may currently choose between."""
+        return self.candidates
 
     def is_voting_active(self) -> bool:
-        return self.voting_active
+        return bool(self.candidates and self.voting_closes_at is not None)
 
-    @abstractmethod
-    def vote(self, player: Player, vote_data: str):
-        pass
+    def in_electorate(self, player: Player) -> bool:
+        return player.name in self.votes
 
-    @abstractmethod
+    def has_voted(self, player: Player) -> bool:
+        return bool(self.votes.get(player.name))
+
+    def is_complete(self, now: int) -> bool:
+        """Everyone in the electorate has voted, or voting has closed. Non-voters abstain."""
+        return self.is_voting_active() and (all(self.votes.values()) or now >= self.voting_closes_at)
+
+    def next_deadline(self) -> Optional[int]:
+        return self.voting_closes_at if self.is_voting_active() else None
+
     def get_result(self) -> str:
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
-    def is_complete(self) -> bool:
-        pass
+    # ------------------------------------------------------------------ #
+    def to_dict(self) -> Dict[str, Any]:
+        return {"class": type(self).__name__, "key": self.key, "label": self.label, "candidates": self.candidates,
+                "votes": self.votes, "voting_closes_at": self.voting_closes_at}
+
+    def _load(self, data: Dict[str, Any]):
+        self.candidates = list(data["candidates"])
+        self.votes = {k: list(v) for k, v in data["votes"].items()}
+        self.voting_closes_at = data["voting_closes_at"]
+
+
+# --------------------------------------------------------------------------- #
+# Elections
+# --------------------------------------------------------------------------- #
+class VotingSystem(Ballot):
+    """An election to fill one seat of an office: a nomination period, then a voting period."""
+
+    def __init__(self, role: str, method: str, council: Optional[str] = None, nomination_hours: int = 720,
+                 voting_hours: int = 720, seat_number: int = 1, label: Optional[str] = None):
+        super().__init__(key=f"elect:{role}", label=label or role)
+        self.role = role
+        self.seat_number = seat_number
+        self.method = method          # "tribe_vote" or "council_vote"
+        self.council = council
+        self.nomination_hours = nomination_hours
+        self.voting_hours = voting_hours
+        self.nominations: List[str] = []
+        self.nominated_by: Dict[str, str] = {}   # candidate -> who put them forward
+        self.declined: List[str] = []            # people who turned this election down; not nominated again
+        self.nominations_close_at: Optional[int] = None
+        self.is_nomination_open = False
+        self.government = None  # set by VotingManager
+
+    def start_nominations(self, now: int):
+        self.is_nomination_open = True
+        self.nominations_close_at = now + self.nomination_hours
+
+    def is_nomination_period_over(self, now: int) -> bool:
+        return self.nominations_close_at is not None and now >= self.nominations_close_at
+
+    def close_nominations(self):
+        self.is_nomination_open = False
+
+    def next_deadline(self) -> Optional[int]:
+        return self.nominations_close_at if self.is_nomination_open else super().next_deadline()
+
+    def can_nominate(self, player: Player) -> bool:
+        return bool(self.government) and player in self.government.electorate(self.method, self.council)
+
+    def nominate(self, nominator: Player, candidate_name: str):
+        if not self.is_nomination_open:
+            raise ValueError("Nominations are not open")
+        if not self.can_nominate(nominator):
+            raise ValueError(f"{nominator.name} may not nominate for {self.role}")
+        if candidate_name in self.nominations:
+            raise ValueError(f"{candidate_name} is already nominated for {self.role}")
+        if candidate_name in self.declined:
+            raise ValueError(f"{candidate_name} has declined to stand for {self.role}")
+        self.nominations.append(candidate_name)
+        self.nominated_by[candidate_name] = nominator.name
+        logger.debug(f"{nominator.name} nominated {candidate_name} for {self.label}")
+
+    @staticmethod
+    def _top(vote_counts: Dict[str, int]) -> str:
+        if not vote_counts:
+            return ""
+        best = max(vote_counts.values())
+        return random.choice([c for c, v in vote_counts.items() if v == best])  # ties broken by lot
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {**super().to_dict(), "role": self.role, "seat_number": self.seat_number, "method": self.method,
+                "council": self.council, "nomination_hours": self.nomination_hours, "voting_hours": self.voting_hours,
+                "nominations": self.nominations, "nominations_close_at": self.nominations_close_at,
+                "nominated_by": dict(self.nominated_by), "declined": list(self.declined),
+                "is_nomination_open": self.is_nomination_open}
+
+    def _load(self, data: Dict[str, Any]):
+        super()._load(data)
+        self.nominations = list(data["nominations"])
+        self.nominated_by = dict(data.get("nominated_by", {}))
+        self.declined = list(data.get("declined", []))
+        self.nominations_close_at = data["nominations_close_at"]
+        self.is_nomination_open = data["is_nomination_open"]
+
 
 class FirstPastThePost(VotingSystem):
-    def __init__(
-        self,
-        role: str,
-        force_vote: bool = True,
-        nomination_control: str = "time_based",
-        nomination_duration: int = 1,
-        nomination_starter_role: Optional[str] = None,
-        nomination_closer_role: Optional[str] = None,
-        seat_number: Optional[int] = None,
-    ):
-        super().__init__(
-            role,
-            force_vote,
-            nomination_control,
-            nomination_duration,
-            nomination_starter_role,
-            nomination_closer_role,
-            seat_number
-        )
-
-    def vote(self, player: Player, candidate: str):
-        if not self.voting_active:
-            raise ValueError("Voting is not active")
-        if candidate not in self.candidates:
-            raise ValueError(f"{candidate} is not a valid candidate")
-        if player in self.votes:
-            raise ValueError(f"{player.name} has already voted")
-        self.votes[player] = candidate
-
-    def is_complete(self, sim: 'core.main.Simulation') -> bool:
-        # Voting completes when the year advances past the voting start year
-        return self.voting_start_year is not None and sim.current_year > self.voting_start_year
-
     def get_result(self) -> str:
-        if not self.votes:
-            return random.choice(self.candidates)
-        vote_counts = {}
-        for candidate in self.candidates:
-            vote_counts[candidate] = sum(1 for v in self.votes.values() if v == candidate)
-        max_votes = max(vote_counts.values())
-        winners = [c for c, v in vote_counts.items() if v == max_votes]
-        return random.choice(winners)
+        counts = {c: 0 for c in self.candidates}
+        for ballot in self.votes.values():
+            if ballot and ballot[0] in counts:
+                counts[ballot[0]] += 1
+        return self._top(counts)
+
 
 class RankedChoiceVoting(VotingSystem):
-    def __init__(
-        self,
-        role: str,
-        force_vote: bool = True,
-        nomination_control: str = "time_based",
-        nomination_duration: int = 1,
-        nomination_starter_role: Optional[str] = None,
-        nomination_closer_role: Optional[str] = None,
-        seat_number: Optional[int] = None,
-    ):
-        super().__init__(
-            role,
-            force_vote,
-            nomination_control,
-            nomination_duration,
-            nomination_starter_role,
-            nomination_closer_role,
-            seat_number
-        )
-        self.votes: Dict[Player, str] = {}
-
-    def vote(self, player: Player, preferences: List[str]):
-        if not self.voting_active:
-            raise ValueError("Voting is not active")
-        if len(preferences) != len(self.candidates):
-            raise ValueError("Invalid number of preferences")
-        if sorted(preferences) != sorted(self.candidates):
-            raise ValueError("Preferences must include all candidates")
-        if player in self.votes:
-            raise ValueError(f"{player.name} has already voted")
-        self.votes[player] = ",".join(preferences)
-
-    def is_complete(self) -> bool:
-        return len(self.votes) == len(self.players) or (not self.force_vote and len(self.votes) > 0)
+    ranked = True
 
     def get_result(self) -> str:
-        vote_counts = defaultdict(int)
-        eliminated = set()
-        preferences = {p: v.split(",") for p, v in self.votes.items()}
-        while True:
-            vote_counts.clear()
-            for player, prefs in preferences.items():
-                for candidate in prefs:
-                    if candidate not in eliminated:
-                        vote_counts[candidate] += 1
+        remaining = list(self.candidates)  # a list, not a set, so results never depend on hash order
+        while remaining:
+            counts = {c: 0 for c in remaining}
+            for ballot in self.votes.values():
+                for choice in ballot:
+                    if choice in counts:
+                        counts[choice] += 1
                         break
-            if not vote_counts:
-                return random.choice(self.candidates)
-            max_votes = max(vote_counts.values())
-            if max_votes > sum(vote_counts.values()) / 2:
-                return max(vote_counts, key=vote_counts.get)
-            min_votes = min(vote_counts.values())
-            min_candidates = [c for c, v in vote_counts.items() if v == min_votes]
-            eliminated.add(random.choice(min_candidates))
+            total = sum(counts.values())
+            leader = self._top(counts)
+            if total == 0 or counts[leader] > total / 2 or len(remaining) == 1:
+                return leader
+            lowest = min(counts.values())
+            remaining = [c for c in remaining if counts[c] > lowest] or [leader]
+        return ""
+
 
 class TwoRoundRunoffVoting(VotingSystem):
-    def __init__(
-        self,
-        role: str,
-        force_vote: bool = True,
-        nomination_control: str = "time_based",
-        nomination_duration: int = 1,
-        nomination_starter_role: Optional[str] = None,
-        nomination_closer_role: Optional[str] = None,
-        seat_number: Optional[int] = None,
-    ):
-        super().__init__(
-            role,
-            force_vote,
-            nomination_control,
-            nomination_duration,
-            nomination_starter_role,
-            nomination_closer_role,
-            seat_number
-        )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.finalists: List[str] = []
-        self.first_round = True
 
-    def vote(self, player: Player, candidate: str):
-        if not self.voting_active:
-            raise ValueError("Voting is not active")
-        if candidate not in (self.finalists or self.candidates):
-            raise ValueError(f"{candidate} is not a valid candidate")
-        if player in self.votes:
-            raise ValueError(f"{player.name} has already voted")
-        self.votes[player] = candidate
-
-    def is_complete(self) -> bool:
-        return len(self.votes) == len(self.players) or (not self.force_vote and len(self.votes) > 0)
+    def choices(self) -> List[str]:
+        return self.finalists or self.candidates
 
     def get_result(self) -> str:
-        if not self.votes:
-            return random.choice(self.finalists or self.candidates)
-        vote_counts = {}
-        for candidate in (self.finalists or self.candidates):
-            vote_counts[candidate] = sum(1 for v in self.votes.values() if v == candidate)
-        max_votes = max(vote_counts.values())
-        if max_votes > sum(vote_counts.values()) / 2:
-            return max(vote_counts, key=vote_counts.get)
-        if not self.finalists:
-            top_two = sorted(vote_counts, key=vote_counts.get, reverse=True)[:2]
-            self.finalists = top_two
-            self.first_round = False
-            self.votes.clear()
-            return "RUNOFF"
-        winners = [c for c, v in vote_counts.items() if v == max_votes]
-        return random.choice(winners)
+        pool = self.finalists or self.candidates
+        counts = {c: 0 for c in pool}
+        for ballot in self.votes.values():
+            if ballot and ballot[0] in counts:
+                counts[ballot[0]] += 1
+        if self.finalists:
+            return self._top(counts)
+        ranked = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+        if len(ranked) == 1 or ranked[0][1] > sum(counts.values()) / 2:
+            return ranked[0][0]
+        self.finalists = [ranked[0][0], ranked[1][0]]
+        return "RUNOFF"
 
-class VotingInterface(ABC):
-    def __init__(self, voting_system: VotingSystem):
-        self.voting_system = voting_system
+    def to_dict(self) -> Dict[str, Any]:
+        return {**super().to_dict(), "finalists": self.finalists}
 
-    @abstractmethod
-    def display_vote_options(self) -> str:
-        pass
+    def _load(self, data: Dict[str, Any]):
+        super()._load(data)
+        self.finalists = list(data.get("finalists", []))
 
-    @abstractmethod
-    def handle_vote(self, player: Player, vote_data: str):
-        pass
 
-class FirstPastThePostInterface(VotingInterface):
-    def display_vote_options(self) -> str:
-        return f"Vote for one: {', '.join(self.voting_system.candidates)}"
+# --------------------------------------------------------------------------- #
+# Motions: yes/no votes on removing someone, a status, or a reform
+# --------------------------------------------------------------------------- #
+class Motion(Ballot):
+    KINDS = {
+        "remove_office": "Remove {target} as {subject}?",
+        "grant_status": "Make {target} {subject}?",
+        "revoke_status": "Lift {target}'s {subject} status?",
+        "reform": "Reform the government into a {subject}?",
+    }
 
-    def handle_vote(self, player: Player, vote_data: str):
-        self.voting_system.vote(player, vote_data)
+    def __init__(self, kind: str, subject: str, target: Optional[Player], proposer: Player, subject_label: str = None):
+        target_name = target.name if target else ""
+        label = self.KINDS[kind].format(target=target_name, subject=subject_label or subject)
+        super().__init__(key=f"{kind}:{subject}:{target_name}", label=label)
+        self.kind = kind
+        self.subject = subject
+        self.subject_label = subject_label
+        self.target = target
+        self.proposer = proposer
 
-class RankedChoiceInterface(VotingInterface):
-    def display_vote_options(self) -> str:
-        return f"Rank candidates (comma-separated): {', '.join(self.voting_system.candidates)}"
+    def passed(self) -> bool:
+        """Passes with yes votes from a majority of the whole electorate (abstaining counts against)."""
+        yes = sum(1 for ballot in self.votes.values() if ballot == ["Yes"])
+        return yes > len(self.votes) / 2
 
-    def handle_vote(self, player: Player, vote_data: str):
-        preferences = [x.strip() for x in vote_data.split(",")]
-        self.voting_system.vote(player, preferences)
+    def get_result(self) -> str:
+        return "Yes" if self.passed() else "No"
 
-class TwoRoundRunoffInterface(VotingInterface):
-    def display_vote_options(self) -> str:
-        candidates = self.voting_system.finalists or self.voting_system.candidates
-        return f"Vote for one: {', '.join(candidates)}"
+    def to_dict(self) -> Dict[str, Any]:
+        return {**super().to_dict(), "kind": self.kind, "subject": self.subject, "subject_label": self.subject_label,
+                "target": self.target.name if self.target else None, "proposer": self.proposer.name}
 
-    def handle_vote(self, player: Player, vote_data: str):
-        self.voting_system.vote(player, vote_data)
+
+BALLOT_CLASSES = {c.__name__: c for c in (FirstPastThePost, RankedChoiceVoting, TwoRoundRunoffVoting, Motion)}
+
+
+def ballot_from_dict(data: Dict[str, Any], player: Callable[[str], Player]) -> Ballot:
+    cls = BALLOT_CLASSES[data["class"]]
+    if cls is Motion:
+        ballot = Motion(data["kind"], data["subject"], player(data["target"]) if data["target"] else None,
+                        player(data["proposer"]), data.get("subject_label"))
+    else:
+        ballot = cls(data["role"], data["method"], data["council"], data["nomination_hours"], data["voting_hours"],
+                     data["seat_number"], data["label"])
+    ballot._load(data)
+    return ballot

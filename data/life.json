@@ -1,0 +1,132 @@
+{
+  "_comment": "Life and death: how old people get, illness and healing, death and what is done with the dead, pregnancy and birth, and childhood (play and study). Every number here can change with the age, the government and what has been researched: the game starts from 'base', then lays over it, in order, 'ages.<age key>' for every age reached (Tribal, then Stone...), then 'governments.<government key>' for the current government, then 'innovations.<name>' for every innovation discovered. An override names only what it changes: objects merge key by key, anything else (numbers, lists, curves) is replaced. Curves are [x, value] points joined by straight lines and flat past the ends. Ages are in years, days in calendar days (360 a year), 'life_hours' in hours of the day-night cycle (one = 45 calendar days), and 'per_day' rates per day-night cycle, as in character.json.",
+  "base": {
+    "work_age": 9,
+    "politics_age": 14,
+    "no_work": {
+      "_comment": "Who can't work at all (no job's work, crafting or laying the dead to rest): anyone ill ('while_ill') and anyone whose health is below 'health_below'. They keep their job, but their Work contentment sinks while they can't work it (society.json meter 'work').",
+      "while_ill": true,
+      "health_below": 35
+    },
+    "_ages_comment": "'work_age': from this age people may take up work, be appointed and do any work; before it they are children who play and study (see 'childhood'). 'politics_age': from this age people may vote, nominate and be nominated, hold office, campaign, challenge, appoint and research, and they count toward the tribe's innovation points.",
+    "life_stages": [[0, "Baby"], [2, "Child"], [9, "Youth"], [14, "Adult"], [38, "Old"]],
+    "need_factors": {
+      "_comment": "How fast a need falls by age, as a share of an adult's (children eat and drink less). Needs not listed fall at the adult rate.",
+      "food": [[0, 0.45], [9, 0.75], [14, 1.0]],
+      "water": [[0, 0.5], [9, 0.8], [14, 1.0]]
+    },
+    "aging": [
+      {"attributes": ["strength", "dexterity", "constitution"], "from_age": 36, "every_years": 4, "change": -1},
+      {"attributes": ["wisdom"], "from_age": 24, "every_years": 8, "change": 1}
+    ],
+    "_aging_comment": "Replaces character.json 'aging' while these rules are in force: attributes change by 'change' every 'every_years' years after 'from_age'.",
+    "illnesses": {
+      "_comment": "Each illness someone may catch. 'rate_per_year' (by age): how many times a year someone that age falls ill with it on average, rolled every calendar day. 'work_chance' (by age): the chance of falling ill each time someone finishes a piece of their own job's work (a task's 'illness_risk' in work.json multiplies it, and makes even work that is no one's job risky, like handling the dead). 'health_loss_per_day': health lost per day-night cycle while ill (nothing heals while ill). 'fatal': health reaching 0 while ill is death (otherwise a collapse, as from hunger). 'cure_chance' (by the patient's age): the chance one visit to a healer cures it, times the healer's skill and the medicine's 'power' (see 'treatment'). 'weight': which illness it is when someone falls ill and several could be caught. 'requires': only once these innovations are known (a later age can add illnesses this way). One illness at a time.",
+      "sickness": {
+        "name": "Sickness",
+        "icon": "🤒",
+        "description": "A fever and a weakness that drains the body. The old catch it more and shake it off less.",
+        "rate_per_year": [[0, 0.05], [2, 0.03], [6, 0.015], [30, 0.02], [35, 0.06], [38, 0.12], [41, 0.3], [44, 0.7], [47, 1.6], [50, 5.0], [52, 25.0]],
+        "work_chance": [[0, 0.005], [25, 0.008], [35, 0.02], [41, 0.05], [45, 0.1], [50, 0.3]],
+        "health_loss_per_day": 100,
+        "fatal": true,
+        "cure_chance": [[0, 0.6], [9, 0.75], [30, 0.7], [38, 0.55], [42, 0.4], [45, 0.28], [48, 0.12], [50, 0.03], [52, 0.0]],
+        "weight": 1,
+        "requires": []
+      }
+    },
+    "treatment": {
+      "_comment": "Seeing a healer ('See the healer', under E). Anyone ill, or with health below 'below_health', may go to someone holding one of the 'healers' occupations who carries one of the 'medicine' items in their own pack (a healer with nothing in their pack can do nothing). The best medicine there is gets used up ('count'). Each visit takes 'life_hours', may cure the illness (the illness's 'cure_chance' x the healer's factor x the medicine's 'power', at most 1) and gives back 'health_gain' health (x the healer's factor x 'power'), cured or not: health that is very low needs several visits, or rest. 'healer_factor' is by the healer's work quality as a Healer (0-100). 'self': a healer may treat themselves. The visit counts as the healer's work (skill practice, and their job counts as worked). Resting is how health comes back otherwise: see character.json 'health.regen_factors' (working: none at all).",
+      "label": "See the healer",
+      "life_hours": 1,
+      "healers": ["Healer"],
+      "medicine": [
+        {"item": "poultice", "count": 1, "power": 1.4},
+        {"item": "herbs", "count": 1, "power": 1.0}
+      ],
+      "health_gain": 20,
+      "healer_factor": [[0, 0.6], [50, 1.0], [100, 1.4]],
+      "below_health": 60,
+      "self": true,
+      "healer_keeps": 4,
+      "_healer_keeps_comment": "An NPC healer whose pack holds fewer medicine items than this takes more from the camp store as soon as there is some."
+    },
+    "remains": {
+      "_comment": "Someone who dies leaves a body in camp, still listed in the tribe (as dead, with 'icon') until someone lays it to rest: carrying it away, burning or burying it (work.json tasks with 'disposes_of_dead'; anyone old enough to work may do them, under W). While bodies lie in camp, everyone falls ill more easily: each body multiplies the illness rates by 1 + 'illness_factor_per_body' + 'illness_factor_per_year' x the years it has lain there. What the dead carried goes to the camp store.",
+      "icon": "💀",
+      "illness_factor_per_body": 0.5,
+      "illness_factor_per_year": 2.0
+    },
+    "pregnancy": {
+      "_comment": "Every 'roll_every_days' calendar days there is 'chance' that one of the women who can bear children (character.json genders 'bears_children') becomes pregnant. Which one is drawn by 'fertility' (a weight by age; 0 = can't). Nobody already pregnant, ill, or within 'rest_after_birth_days' of giving birth. The father is not known ('father': 'unknown'; later ages may name one). The pregnancy lasts 'term_days'; for the last 'no_work_last_days' she can't work (she keeps her job). Then the child is born, aged 0.",
+      "icon": "🤰",
+      "roll_every_days": 28,
+      "chance": 0.045,
+      "fertility": [[12, 0.0], [14, 0.5], [17, 1.0], [30, 1.0], [35, 0.6], [40, 0.2], [43, 0.0]],
+      "not_while_ill": true,
+      "rest_after_birth_days": 180,
+      "term_days": 270,
+      "no_work_last_days": 90,
+      "father": "unknown"
+    },
+    "birth": {
+      "_comment": "A newborn: 'genders' (weights), a name not used before in this game from 'names' (by gender; with every name used, a numeral is added), 'traits' (that many drawn from 'trait_pool': they shape how an NPC behaves), and a 'description' ({mother}, {date} are filled in). Every attribute starts at 'attribute_start' and every skill at 0: childhood (play and study) does the rest.",
+      "genders": {"female": 1, "male": 1},
+      "attribute_start": 5,
+      "names": {
+        "female": ["Ada", "Bina", "Cora", "Dara", "Elin", "Fena", "Gala", "Hana", "Ilse", "Juna", "Kira", "Lina", "Mira", "Nia", "Oda", "Pia", "Rana", "Sela", "Tova", "Una", "Vela", "Wren", "Yara", "Zia"],
+        "male": ["Aro", "Bram", "Cato", "Dov", "Eno", "Finn", "Goran", "Hal", "Ivo", "Jari", "Kai", "Lev", "Milo", "Nao", "Oren", "Pell", "Rafi", "Soren", "Taro", "Udo", "Vik", "Wim", "Yan", "Zev"]
+      },
+      "traits": 2,
+      "trait_pool": ["ambitious", "reckless", "passionate", "shrewd", "calculating", "persuasive", "conservative", "traditional", "stubborn", "patient", "caring", "empathetic", "fair", "diplomatic", "inventive", "observant", "rational", "practical", "impatient"],
+      "description": "Born to {mother}, {date}."
+    },
+    "succession": {
+      "_comment": "When someone holding an office dies, the seat doesn't wait for its usual way of being filled (a divine sign, a yearly roll, the next ordinary election): if 'snap_election', nominations open at once for 'nomination_days', then voting for 'voting_days', among the office's usual voters (the whole tribe for offices not chosen by vote). Anyone may also campaign for the empty seat by persuasion straight away; NPCs see an empty seat as a reason to (npc.json 'politics.vacant_seat').",
+      "snap_election": true,
+      "nomination_days": 5,
+      "voting_days": 10
+    },
+    "successor": {
+      "_comment": "When the person you play dies, you play on as someone else: the first of these that finds someone alive. 'children': your own children, eldest first. 'youngest_adult': the youngest member old enough for politics. 'anyone': the youngest member alive.",
+      "order": ["children", "youngest_adult", "anyone"]
+    },
+    "childhood": {
+      "_comment": "Children (below 'work_age') don't work: they play and study instead (under W, like work). Each activity takes 'life_hours', from 'min_age', once its 'requires' are known; 'needs_company': only with another child old enough to join in. Each one done adds its 'attributes' points toward the child's attributes (every whole point raises the attribute by 1, up to character.json 'attribute_range') and practises its 'skills' (as skill points, faster with talent). At 'work_age' the attributes are set: from then on only aging changes them. Playing or studying counts as a child's work for their Work contentment.",
+      "activities": {
+        "play_friends": {"group": "play", "label": "Play with friends", "life_hours": 1.5, "min_age": 2, "needs_company": true,
+                         "attributes": {"charisma": 0.45, "dexterity": 0.25}, "skills": {"persuasion": 0.15}},
+        "play_alone": {"group": "play", "label": "Play alone", "life_hours": 1.5, "min_age": 2,
+                       "attributes": {"wisdom": 0.4, "intelligence": 0.3}, "skills": {}},
+        "rough_games": {"group": "play", "label": "Run, climb and wrestle", "life_hours": 1.5, "min_age": 3,
+                        "attributes": {"strength": 0.4, "constitution": 0.3}, "skills": {"combat": 0.1}},
+        "study_stories": {"group": "study", "label": "Listen to the old stories", "life_hours": 1.5, "min_age": 4, "requires": ["Language"],
+                          "attributes": {"intelligence": 0.45, "wisdom": 0.25}, "skills": {"lore": 0.25}},
+        "study_plants": {"group": "study", "label": "Learn which plants are good to eat", "life_hours": 1.5, "min_age": 4,
+                         "attributes": {"wisdom": 0.45, "constitution": 0.25}, "skills": {"gathering": 0.3}},
+        "study_fire": {"group": "study", "label": "Learn to keep a fire", "life_hours": 1.5, "min_age": 5, "requires": ["Fire"],
+                       "attributes": {"constitution": 0.45, "wisdom": 0.25}, "skills": {"firekeeping": 0.3}},
+        "study_council": {"group": "study", "label": "Sit with the elders at council", "life_hours": 1.5, "min_age": 6, "requires": ["Hierarchy"],
+                          "attributes": {"charisma": 0.35, "intelligence": 0.35}, "skills": {"leadership": 0.2}},
+        "study_tools": {"group": "study", "label": "Watch the toolmaker", "life_hours": 1.5, "min_age": 5, "requires": ["Toolmaking"],
+                        "attributes": {"dexterity": 0.45, "intelligence": 0.25}, "skills": {"crafting": 0.3}},
+        "study_tracks": {"group": "study", "label": "Learn to read tracks", "life_hours": 1.5, "min_age": 5, "requires": ["Tracking"],
+                         "attributes": {"dexterity": 0.35, "wisdom": 0.35}, "skills": {"scouting": 0.3}},
+        "study_hunt": {"group": "study", "label": "Learn the hunt", "life_hours": 1.5, "min_age": 6, "requires": ["Hunting"],
+                       "attributes": {"strength": 0.35, "dexterity": 0.35}, "skills": {"hunting": 0.3}},
+        "study_herbs": {"group": "study", "label": "Learn the healing herbs", "life_hours": 1.5, "min_age": 6, "requires": ["Herbalism"],
+                        "attributes": {"wisdom": 0.45, "intelligence": 0.25}, "skills": {"healing": 0.3}}
+      }
+    }
+  },
+  "ages": {
+    "_comment": "Overrides by age key (ages.json), applied for every age reached, in order. Example: {\"stone\": {\"illnesses\": {\"sickness\": {\"rate_per_year\": [[0, 0.1], [50, 1.5], [60, 25]]}}}} lets Stone Age people live longer.",
+    "tribal": {}
+  },
+  "governments": {
+    "_comment": "Overrides by government key (data/governments), while that government is in place."
+  },
+  "innovations": {
+    "_comment": "Overrides by innovation name, once it is discovered. Example: {\"Marriage\": {\"pregnancy\": {\"father\": \"spouse\", \"chance\": 0.08}}}."
+  }
+}

@@ -1,0 +1,646 @@
+{
+  "_comment": "What work produces. 'tasks': things people do as their job: 'occupations' and/or 'offices' list whose work it is ('any_office': the work of every office with no task of its own); with none of them, anyone may do it. Each takes 'life_hours' of the day-night cycle, trains 'skill', may need 'requires' (innovations) and one of 'tools' (items; the first one found in the worker's pack, else taken from the camp store; each tool may break, see items.json), may 'consumes' items, and 'yields' items into the camp store when the work is done. A yield's 'amount' is for an average worker (work quality 50); better workers bring back more. 'chance': the share of trips that find it at all. 'boost': tools that multiply the yield if the worker has one ('hand_axe': 1.5). 'tool_yields' multiplies the yield by which tool did the work. 'fire_life_hours': feeds the communal fire for that long. 'recipes': things made by craft. 'inputs' are taken from the worker's pack, then the camp store. 'fire': how long the fire burns at the start and at most. 'work_counts_life_hours': work done within this long counts for the society (a job held but not worked slowly stops counting) and for skill practice. 'auto_take_tools': someone whose job's work needs a tool they don't carry takes one from the camp store as soon as there is one (until then they wait; being appointed doesn't need the tool). 'stock_targets': what NPCs consider enough in the camp store (a better tool that 'counts_as' a lesser one, items.json, counts toward it too) ('food' and 'water' per member, in food or water points; items as counts); they work harder for what is short. 'work_fades_life_hours': after 'work_counts_life_hours' without working, the job's worth fades to nothing over this long. 'practice_days_per_task': each finished piece of work trains its skill as much as this many days of practice (character.json 'training_per_year'). 'yield_roll': a yield is 'amount' x (from 'at_quality_0' to 'at_quality_100' by work quality) x a random factor of 1 +/- 'luck'. 'anyone_attributes': what makes someone good at tasks open to anyone (fetching water), with the task's skill. 'fire.feed_at_quality_0'/'feed_at_quality_100': a Firekeeper's 'fire_life_hours' is multiplied by this, from their work quality. 'site' (tasks): the kind of good place ('sites') that makes the trip likely to succeed; without one it often comes back empty (see 'trips'). 'finds_sites': this task looks for sites (the Scout's). 'speed_tools' (a task or recipe): tools that make the work go that many times faster, the best one the worker can lay hands on (it is taken into their pack, and wears like any tool used); recipes without their own use 'craft_speed_tools' (it takes tools to make tools). 'disposes_of_dead' (a task open to anyone old enough to work): lays one of the dead lying in camp to rest (life.json 'remains'); 'done_text' is what the chronicle says ({name}, {body}). 'illness_risk': this many times the illness 'work_chance' (life.json) of falling ill when the work is done; leave it out for a job's own work (1) or other work (no risk).",
+  "work_counts_life_hours": 18,
+  "work_fades_life_hours": 18,
+  "practice_days_per_task": 6,
+  "yield_roll": {
+    "at_quality_0": 0.5,
+    "at_quality_100": 1.5,
+    "luck": 0.3
+  },
+  "anyone_attributes": {
+    "constitution": 1.0,
+    "wisdom": 1.0
+  },
+  "fire": {
+    "start_life_hours": 8,
+    "max_life_hours": 14,
+    "feed_at_quality_0": 0.7,
+    "feed_at_quality_100": 1.29
+  },
+  "trips": {
+    "_comment": "Trips out for something (tasks with a 'site') are a gamble: they bring anything back only with the task's own 'chance' (else 'base_chance'), plus 'quality_effect' x (work quality - 50) / 50, between 'min_chance' and 'max_chance'. While a found place of that kind has something left (see 'sites'), the trip goes there instead: it succeeds with 'with_site_chance' (1 = always: the place is known, it only has to be fetched) and brings back a big share of the place's abundance.",
+    "base_chance": 0.4,
+    "with_site_chance": 1.0,
+    "quality_effect": 0.1,
+    "min_chance": 0.05,
+    "max_chance": 0.97
+  },
+  "sites": {
+    "_comment": "Good places a Scout finds. A task with 'finds_sites' becomes one task per kind below ('<key>_<kind>', its label with {short}/{name} filled in): the Scout chooses what to look for, as a Gatherer chooses what to gather, and can only look for kinds someone could use now (an open job does that kind of trip). A Scout brings nothing back: the trip finds a place with 'find_chance' (plus 'find_quality_effect' x (work quality - 50) / 50), far likelier than a Gatherer's trip succeeding. A found place holds an abundance: 'loads' (a [min, max] range, or a kind's own 'loads') times an ordinary trip's haul. Each trip of that kind (anyone's) goes to the oldest place with something left, certainly succeeds (trips.with_site_chance) and brings back up to 'take_per_trip' loads (all of it if less than 'least_left' would be left); when nothing is left it is used up and the next place found is used. Unused, a place is lost after 'life_hours' of the day-night cycle. The last 'spent_shown' used-up or lost places stay listed (greyed) in the Found places panel. A Sustenance Gardener's plot (tasks with 'makes_sites') is a place too: 'loads' there (else 1), topping up their own plot of that kind. 'kinds': 'name' for the chronicle ('found ...'), 'short', 'icon', 'weight' (only for gardeners' plots), optional 'loads'.",
+    "life_hours": 24,
+    "find_chance": 0.85,
+    "find_quality_effect": 0.2,
+    "kinds": {
+      "plants": {
+        "name": "rich berry and root grounds",
+        "short": "berry grounds",
+        "icon": "🫐",
+        "weight": 1
+      },
+      "wood": {
+        "name": "a stand of deadwood",
+        "short": "deadwood",
+        "icon": "🪵",
+        "weight": 1
+      },
+      "stone": {
+        "name": "a bed of good stone",
+        "short": "stone bed",
+        "icon": "🪨",
+        "weight": 1
+      },
+      "game": {
+        "name": "fresh game trails",
+        "short": "game trails",
+        "icon": "🦌",
+        "weight": 1
+      },
+      "fish": {
+        "name": "a pool full of fish",
+        "short": "fishing pool",
+        "icon": "🐟",
+        "weight": 1
+      },
+      "herbs": {
+        "name": "a patch of healing herbs",
+        "short": "herb patch",
+        "icon": "🌿",
+        "weight": 1
+      }
+    },
+    "loads": [
+      3,
+      5
+    ],
+    "take_per_trip": 2.0,
+    "least_left": 0.3,
+    "spent_shown": 4
+  },
+  "tasks": {
+    "forage": {
+      "label": "Forage for plants",
+      "occupations": [
+        "Gatherer"
+      ],
+      "life_hours": 2,
+      "skill": "gathering",
+      "yields": [
+        {
+          "item": "berries",
+          "amount": 7
+        },
+        {
+          "item": "roots",
+          "amount": 4,
+          "chance": 0.7
+        },
+        {
+          "item": "herbs",
+          "amount": 1,
+          "chance": 0.15
+        }
+      ],
+      "site": "plants",
+      "chance": 0.3
+    },
+    "gather_wood": {
+      "label": "Gather wood",
+      "occupations": [
+        "Gatherer",
+        "Firekeeper"
+      ],
+      "life_hours": 1.5,
+      "skill": "gathering",
+      "yields": [
+        {
+          "item": "wood",
+          "amount": 5
+        }
+      ],
+      "boost": {
+        "hand_axe": 1.6,
+        "wooden_hand_axe": 1.25
+      },
+      "site": "wood"
+    },
+    "gather_stone": {
+      "label": "Gather stone",
+      "occupations": [
+        "Gatherer"
+      ],
+      "life_hours": 1.5,
+      "skill": "gathering",
+      "yields": [
+        {
+          "item": "stone",
+          "amount": 4
+        },
+        {
+          "item": "flint",
+          "amount": 1,
+          "chance": 0.3
+        }
+      ],
+      "site": "stone"
+    },
+    "fetch_water": {
+      "label": "Fetch water from the river",
+      "occupations": [
+        "Gatherer"
+      ],
+      "life_hours": 1,
+      "skill": "gathering",
+      "yields": [
+        {
+          "item": "water",
+          "amount": 8
+        }
+      ]
+    },
+    "tend_fire": {
+      "label": "Tend the fire",
+      "occupations": [
+        "Firekeeper"
+      ],
+      "life_hours": 0.5,
+      "skill": "firekeeping",
+      "consumes": [
+        {
+          "item": "wood",
+          "count": 2
+        }
+      ],
+      "fire_life_hours": 5
+    },
+    "hunt": {
+      "label": "Go hunting",
+      "occupations": [
+        "Hunter"
+      ],
+      "life_hours": 3,
+      "skill": "hunting",
+      "requires": [
+        "Hunting"
+      ],
+      "tools": [
+        "bow",
+        "flint_spear",
+        "wooden_spear"
+      ],
+      "tool_yields": {
+        "bow": 1.4,
+        "flint_spear": 1.2,
+        "wooden_spear": 1.0,
+        "flint_arrows": 1.15
+      },
+      "tool_consumes": {
+        "bow": [
+          {
+            "item": "arrows",
+            "count": 1
+          }
+        ]
+      },
+      "yields": [
+        {
+          "item": "meat",
+          "amount": 13
+        },
+        {
+          "item": "hide",
+          "amount": 2,
+          "chance": 0.9
+        },
+        {
+          "item": "bone",
+          "amount": 4,
+          "chance": 0.9
+        }
+      ],
+      "boost": {
+        "stone_knife": 1.25,
+        "wooden_knife": 1.1
+      },
+      "site": "game",
+      "chance": 0.25
+    },
+    "fish": {
+      "label": "Go fishing",
+      "occupations": [
+        "Fisher"
+      ],
+      "life_hours": 2,
+      "skill": "fishing",
+      "requires": [
+        "Fishing"
+      ],
+      "tools": [
+        "fishing_spear"
+      ],
+      "yields": [
+        {
+          "item": "fish",
+          "amount": 3
+        }
+      ],
+      "site": "fish"
+    },
+    "scout": {
+      "label": "Scout for {name}",
+      "occupations": [
+        "Scout"
+      ],
+      "life_hours": 3,
+      "skill": "scouting",
+      "finds_sites": true,
+      "_comment": "Becomes one task per site kind (scout_plants, scout_game...): the Scout chooses what to look for. Brings nothing back: finds a place (see 'sites')."
+    },
+    "patrol": {
+      "label": "Patrol the camp",
+      "occupations": [
+        "Warrior"
+      ],
+      "life_hours": 2,
+      "skill": "combat",
+      "tools": [
+        "flint_spear",
+        "wooden_spear"
+      ]
+    },
+    "gather_herbs": {
+      "label": "Gather healing herbs",
+      "occupations": [
+        "Healer"
+      ],
+      "life_hours": 2,
+      "skill": "healing",
+      "yields": [
+        {
+          "item": "herbs",
+          "amount": 3
+        }
+      ],
+      "site": "herbs"
+    },
+    "tell_stories": {
+      "label": "Tell stories by the fire",
+      "occupations": [
+        "Storyteller"
+      ],
+      "life_hours": 1.5,
+      "skill": "lore"
+    },
+    "build": {
+      "label": "Raise shelters",
+      "occupations": [
+        "Builder"
+      ],
+      "life_hours": 3,
+      "skill": "building",
+      "consumes": [
+        {
+          "item": "wood",
+          "count": 4
+        },
+        {
+          "item": "hide",
+          "count": 1
+        }
+      ]
+    },
+    "lead_ritual": {
+      "label": "Lead a ritual of comfort",
+      "offices": [
+        "Spirit Keeper"
+      ],
+      "life_hours": 2,
+      "_comment": "The Spirit Keeper's work: while it lasts everyone's Comfort rises faster and the tribe's care and culture count more (society.json)."
+    },
+    "hold_council": {
+      "label": "Hold council and settle disputes",
+      "offices": [
+        "Elder"
+      ],
+      "life_hours": 2
+    },
+    "office_duties": {
+      "label": "Attend to office duties",
+      "any_office": true,
+      "life_hours": 2,
+      "_comment": "The work of any office that has no task of its own (Clan Leader, Chieftain...)."
+    },
+    "tend_garden": {
+      "label": "Tend a forest garden",
+      "occupations": [
+        "Sustenance Gardener"
+      ],
+      "life_hours": 2,
+      "skill": "gathering",
+      "requires": [
+        "Sustenance Gardening"
+      ],
+      "makes_sites": {
+        "kinds": {
+          "plants": 3,
+          "herbs": 1
+        },
+        "life_hours": 6,
+        "loads": 1.5
+      },
+      "_comment": "The Sustenance Gardener plants and tends plots: each time a place of plants (or herbs) the Gatherers (or Healers) can go to for a sure harvest, for 'life_hours'. They don't gather it themselves."
+    },
+    "carry_off_dead": {
+      "label": "Carry the dead away from camp",
+      "life_hours": 1.5,
+      "disposes_of_dead": true,
+      "illness_risk": 4,
+      "done_text": "carries {body} far from camp and covers the body with stones"
+    },
+    "burn_dead": {
+      "label": "Burn the dead on a pyre",
+      "life_hours": 1,
+      "requires": [
+        "Fire"
+      ],
+      "consumes": [
+        {
+          "item": "wood",
+          "count": 6
+        }
+      ],
+      "disposes_of_dead": true,
+      "illness_risk": 1,
+      "done_text": "builds a pyre and burns {body}'s body"
+    },
+    "bury_dead": {
+      "label": "Bury the dead with rites",
+      "life_hours": 1.5,
+      "requires": [
+        "Burial Rites"
+      ],
+      "disposes_of_dead": true,
+      "illness_risk": 1,
+      "done_text": "buries {body} with the old rites"
+    }
+  },
+  "recipes": {
+    "wooden_hand_axe": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Toolmaking"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 2
+        }
+      ],
+      "output": {
+        "item": "wooden_hand_axe",
+        "count": 1
+      }
+    },
+    "wooden_knife": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Toolmaking"
+      ],
+      "life_hours": 1.5,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 1
+        }
+      ],
+      "output": {
+        "item": "wooden_knife",
+        "count": 1
+      }
+    },
+    "wooden_spear": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Toolmaking"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 2
+        }
+      ],
+      "output": {
+        "item": "wooden_spear",
+        "count": 1
+      }
+    },
+    "fishing_spear": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Fishing"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 2
+        }
+      ],
+      "output": {
+        "item": "fishing_spear",
+        "count": 1
+      }
+    },
+    "bow": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Archery"
+      ],
+      "life_hours": 9,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 3
+        }
+      ],
+      "output": {
+        "item": "bow",
+        "count": 1
+      }
+    },
+    "arrows": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Archery"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 1
+        }
+      ],
+      "output": {
+        "item": "arrows",
+        "count": 5
+      }
+    },
+    "hand_axe": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Stone Cutting"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "stone",
+          "count": 2
+        }
+      ],
+      "output": {
+        "item": "hand_axe",
+        "count": 1
+      }
+    },
+    "stone_knife": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Stone Cutting"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "stone",
+          "count": 1
+        }
+      ],
+      "output": {
+        "item": "stone_knife",
+        "count": 1
+      }
+    },
+    "flint_spear": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Stone Cutting"
+      ],
+      "life_hours": 6,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 2
+        },
+        {
+          "item": "flint",
+          "count": 1
+        }
+      ],
+      "output": {
+        "item": "flint_spear",
+        "count": 1
+      }
+    },
+    "flint_arrows": {
+      "occupations": [
+        "Toolmaker"
+      ],
+      "requires": [
+        "Archery",
+        "Stone Cutting"
+      ],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [
+        {
+          "item": "wood",
+          "count": 1
+        },
+        {
+          "item": "flint",
+          "count": 1
+        }
+      ],
+      "output": {
+        "item": "flint_arrows",
+        "count": 5
+      }
+    },
+    "poultice": {
+      "occupations": [
+        "Healer"
+      ],
+      "requires": [
+        "Herbalism"
+      ],
+      "life_hours": 1,
+      "skill": "healing",
+      "inputs": [
+        {
+          "item": "herbs",
+          "count": 2
+        }
+      ],
+      "output": {
+        "item": "poultice",
+        "count": 1
+      },
+      "speed_tools": {}
+    }
+  },
+  "stock_targets": {
+    "food": 160,
+    "water": 120,
+    "wood": 14,
+    "stone": 8,
+    "flint": 4,
+    "herbs": 4,
+    "hide": 2,
+    "wooden_hand_axe": 2,
+    "hand_axe": 2,
+    "wooden_knife": 2,
+    "stone_knife": 2,
+    "wooden_spear": 3,
+    "flint_spear": 3,
+    "fishing_spear": 2,
+    "bow": 2,
+    "arrows": 10,
+    "flint_arrows": 10,
+    "poultice": 3
+  },
+  "auto_take_tools": true,
+  "craft_speed_tools": {
+    "stone_knife": 3.0,
+    "hand_axe": 2.5,
+    "wooden_knife": 1.5,
+    "wooden_hand_axe": 1.3
+  }
+}

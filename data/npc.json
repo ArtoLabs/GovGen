@@ -1,0 +1,100 @@
+{
+  "_comment": "How eager NPCs are. NPCs always look after their bodies; everything else they do much less than the player, and politics only when they are unhappy. Raise numbers for livelier NPCs.",
+  "distress_damping": 0.6,
+  "_distress_comment": "'distress_damping': a hungry, thirsty, cold or exhausted NPC is this much less keen on anything but looking after themselves (x how urgent their worst need is), except work that brings back what they lack.",
+  "discontent": {
+    "_comment": "A satisfaction meter below 'starts_below' makes people restless; at 'full_at' fully so. For politics against those in charge, they act on it only once their patience runs out (society.json 'satisfaction.patience').",
+    "starts_below": 55,
+    "full_at": 20
+  },
+  "turnout": {
+    "_comment": "Chance an NPC bothers to vote on a ballot: base + discontent bonus + ambition bonus.",
+    "base": 0.45,
+    "discontent": 0.35,
+    "ambition": 0.15
+  },
+  "nominate_chance": 0.35,
+  "appoint": {
+    "_comment": "Appointers act when a quality fed by the job is below 'gap_below', at most once every 'days_between' days. 'reassign_reluctance': how much less they like taking someone off other work (it makes them resent it, society.json 'job_loss'). 'store_weight': how much a shortage in the camp store (or nobody knowing of good places, for Scouts) counts as a need for the job, next to the society qualities. 'sole_provider_worth': what having someone keep an amenity nobody else keeps (the fire) is worth when weighing a move, in weighted quality points (the Fire quality follows people warming up, not the keeper, so leaders need this to keep a Firekeeper).",
+    "gap_below": 65,
+    "days_between": 30,
+    "reassign_reluctance": 1.0,
+    "store_weight": 1.2,
+    "rank_weight": 0.3,
+    "demote_weight": 0.6,
+    "no_tool_reluctance": 1.0,
+    "demote_gap_full": 0.5,
+    "_rank_comment": "'rank_weight': how much more an appointer likes moving someone up the hierarchy of work, per rank (they welcome it, society.json 'job_rank'); 'demote_weight': how much less they like moving someone down, per rank (they resent it). 'demote_gap_full': the reluctance to move someone down fades as the need for the work grows, gone once the gap reaches this (an empty store needs Gatherers whatever their pride). 'no_tool_reluctance': how much less they like appointing to work whose tools aren't in the camp store yet (the appointee would wait for one).",
+    "sole_provider_worth": 40
+  },
+  "research": {
+    "_comment": "Queuing research (anyone whose role covers the innovation's kind; it takes no time). Score: 'base' + 'curiosity' x their curiosity + 'opens' if it opens a job or government - its cost (against the game's price level) + 'empty_queue' while nothing is being researched + 'free' if it costs nothing. At most once every 'days_between' days each, and not while 'max_queue' are queued. 'cheapest_first' (the user's rule, 2026-11-16): an NPC considers only the cheapest innovation it could queue; the rest of the score decides whether it queues it now.",
+    "base": 1.0,
+    "curiosity": 0.8,
+    "opens": 1.5,
+    "empty_queue": 2.5,
+    "free": 2.0,
+    "days_between": 30,
+    "max_queue": 3,
+    "cheapest_first": true
+  },
+  "politics_years_between": 12,
+  "dismiss": {
+    "_comment": "Appointers dismiss someone from work only when their work quality is below 'poor_below'.",
+    "poor_below": 25
+  },
+  "volunteer": {
+    "_comment": "Taking up open work: +'need' x how short the tribe is of what the work provides, -'crowding' x the share of the tribe already doing it (there is no limit per job, so this spreads people out).",
+    "need": 1.5,
+    "crowding": 9
+  },
+  "work": {
+    "_comment": "Choosing work. 'luck_weight': how much a trip's chance of coming back with anything (work.json 'trips') counts (0 = ignore it, 1 = value a 40% trip at 40%). A Scout chooses what to look for by how short the tribe is of what trips to that kind of place bring back (no food: berry grounds, game trails or a fishing pool), times 'scout_known_factor' per 2 trips' worth already found and not yet used; never less than 'scout_need' (knowing where to go never hurts). Gatherers, Hunters and Fishers go for what is shortest, valuing a trip by its chance, which is certain while a found place has something left. 'store_share_of_target': food and water count as short when the camp store holds less than this share of work.json 'stock_targets' per member (the rest is in people's packs). 'content_weight': how much more an NPC wants to do their own job's work as their Work contentment falls below 'content_wanted' (it rises only while they work). 'own_need_weight': how much keener an NPC is on work that brings back food (or water) while they themselves are hungry (or thirsty). 'waiting_tool_need': how short the camp counts a tool that someone is waiting for (appointed to work they can't do without one; 1 = as short as can be). 'lesser_tool_factor': how keen a Toolmaker still is to make a tool while they could make a better one that stands in for it (items.json 'counts_as').",
+    "luck_weight": 0.6,
+    "scout_need": 0.15,
+    "scout_known_factor": 0.25,
+    "store_share_of_target": 0.5,
+    "content_weight": 1.5,
+    "content_wanted": 70,
+    "own_need_weight": 3.0,
+    "waiting_tool_need": 1.0,
+    "lesser_tool_factor": 0.4
+  },
+  "care": {
+    "_comment": "'critical_bonus': added to the urge to eat or drink once that need is below its 'critical' level (character.json), so a starving NPC eats before sleeping.",
+    "critical_bonus": 6
+  },
+  "politics": {
+    "_comment": "Whom an unhappy tribe moves against: the top office (most points) carries all the discontent with the leaders, a lesser office (its points / the top office's) ^ 'blame_exponent' of it. A holder doing their job badly is a grievance whatever the office.",
+    "blame_exponent": 2,
+    "vacant_seat": 0.6,
+    "_vacant_seat_comment": "'vacant_seat': how much an empty office seat (its holder died, say) counts like discontent toward campaigning for it by persuasion, x the office's blame share (the top office most). It needs no patience to run out."
+  },
+  "health": {
+    "_comment": "How NPCs look after their health (data/life.json). Someone ill does work and play only 'work_when_ill' as keenly (health comes back only while not working), someone below 'rest_below' health 'work_when_hurt' as keenly. Seeing the healer scores 'treat_when_ill' (plus up to 4 more the lower their health) when ill, else 'treat_when_hurt' x the share of health lost. A healer goes to heal someone ill with 'heal_ill' (plus up to 4 the lower their health), someone weak with 'heal_hurt' x the share of health lost: above any other work. While anyone is ill, crafting that uses up medicine (herbs into a poultice) is only 'craft_medicine_while_ill' as keen.",
+    "work_when_ill": 0.2,
+    "work_when_hurt": 0.5,
+    "rest_below": 50,
+    "treat_when_ill": 9.0,
+    "treat_when_hurt": 4.0,
+    "heal_ill": 10.0,
+    "heal_hurt": 5.0,
+    "craft_medicine_while_ill": 0.1
+  },
+  "remains": {
+    "_comment": "Laying the dead to rest (work.json tasks with 'disposes_of_dead'): it scores 'base' + 'per_body' per body lying in camp + 'per_year' per year the oldest has lain there, less 'own_work_weight' for someone with their own job's work to do and 'risk_weight' x the task's 'illness_risk' (so the safer way is preferred). Only one person goes for each body.",
+    "base": 5.0,
+    "per_body": 1.5,
+    "per_year": 4.0,
+    "own_work_weight": 0.8,
+    "risk_weight": 0.3
+  },
+  "childhood": {
+    "_comment": "NPC children play and study (data/life.json 'childhood') whenever their bodies allow: each activity scores 'base' + 'taste' x the child's own lasting liking for it (0-1, different for every child: it is what makes children grow up different) + 'bored_weight' x how low their Work contentment is, + up to 'noise'; x 'night_factor' at night.",
+    "base": 1.8,
+    "taste": 2.5,
+    "bored_weight": 1.0,
+    "noise": 1.0,
+    "night_factor": 0.35
+  }
+}

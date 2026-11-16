@@ -1,0 +1,24 @@
+{
+  "age": "metal",
+  "innovations": [
+    {"name": "Writing", "icon": "📝", "interface": "legislative", "cost": 20, "prerequisites": ["Toolmaking", "Language"], "description": "Symbolic written communication."},
+    {"name": "Record Keeping", "icon": "📚", "interface": "legislative", "cost": 15, "prerequisites": ["Writing"], "description": "Structured records for governance."},
+
+    {"name": "Debt", "icon": "💸", "interface": "economic", "cost": 10, "prerequisites": ["Token Exchange"], "description": "Ability to owe at a later time."},
+    {"name": "Division of Labor", "icon": "👥", "interface": "economic", "cost": 10, "prerequisites": ["Debt"], "description": "Selecting members for specific duties."},
+    {"name": "Skill Specialization", "icon": "🎯", "interface": "economic", "cost": 10, "prerequisites": ["Division of Labor"], "description": "Increases the quality of production."},
+    {"name": "Trade Guilds", "icon": "🏪", "interface": "economic", "cost": 20, "prerequisites": ["Skill Specialization"], "description": "Organized merchant associations."},
+    {"name": "Marketplaces", "icon": "🛒", "interface": "economic", "cost": 15, "prerequisites": ["Trade", "Property"], "description": "Central locations for commerce."},
+    {"name": "Long-Distance Trade", "icon": "🐪", "interface": "economic", "cost": 10, "prerequisites": ["Trade", "The Wheel"], "description": "Increases the number of communities to trade with."},
+    {"name": "Taxation", "icon": "💰", "interface": "economic", "cost": 20, "prerequisites": ["Chieftainship", "Centralized Authority", "Property", "Oral Law", "Debt"], "description": "Systematic resource collection."},
+
+    {"name": "The Wheel", "icon": "🛞", "interface": "infrastructure", "cost": 20, "prerequisites": ["Toolmaking", "Domestication"], "description": "A classic invention for transport."},
+    {"name": "Infrastructure Planning", "icon": "📐", "interface": "infrastructure", "cost": 22, "prerequisites": ["Taxation"], "description": "Coordinated resource allocation."},
+    {"name": "Road Building", "icon": "🚧", "interface": "infrastructure", "cost": 18, "prerequisites": ["Infrastructure Planning", "The Wheel"], "description": "Constructed paths for transport."},
+    {"name": "Sacred Architecture", "icon": "🕌", "interface": "infrastructure", "cost": 18, "prerequisites": ["Infrastructure Planning", "Sacred Sites", "Stone Cutting"], "description": "Heightens the powers of priest and chief."},
+    {"name": "Monumental Architecture", "icon": "🗿", "interface": "infrastructure", "cost": 18, "prerequisites": ["Sacred Architecture", "Stone Cutting"], "description": "Heightens the powers of priest and chief."},
+
+    {"name": "Religion", "icon": "🛐", "interface": "religious", "cost": 25, "prerequisites": ["Ceremonies", "Sacred Architecture"], "description": "Organized spiritual beliefs."},
+    {"name": "Religious Authority", "icon": "📿", "interface": "religious", "cost": 15, "prerequisites": ["Religion"], "description": "Formal clergy or spiritual leaders."}
+  ]
+}

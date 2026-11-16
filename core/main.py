@@ -1,119 +1,145 @@
-import os
+"""Start or continue a game.
+
+    python -m core.main                         play on the real-time HUD; continues the saved game if there is one
+    python -m core.main --classic               play with the old scrolling text menus (turn-based)
+    python -m core.main --new                   start a new game (the save is replaced at the next autosave)
+    python -m core.main --watch --years 50      every player is an NPC; watch them (never touches the save)
+    python -m core.main --speed 20              playback speed multiplier ('max' = no waiting)
+    python -m core.main --seed 7 --log game.jsonl --detail summary
+"""
+import argparse
+import json
 import random
-from typing import List, Tuple, Callable
-from core.government import Government
-from world.player import players, Player
-from core.interfaces import initialize_interfaces
-from core.commands import CommandHandler
-from core.voting_manager import VotingManager
-from core.prompt import PromptManager
-from innovations.innovation_manager import InnovationManager
-from utils.messages import Messages
+import threading
+from typing import Optional
+
+from controllers import HUDController, NPCController, TerminalController, ConsolePrinter
+from core.calendar import format_date
+from core.engine import GameEngine
+from core.game import Game, Pacer
+from core.save import load_save, rng_state_from_json, save_game, save_summary, SAVE_FILE
 from utils.logging_config import logger
+from utils.settings import load_settings
+from world.player import players as default_players
 
-class Simulation:
-    def __init__(self):
-        self.government = Government(self)
-        self.current_year = 0
-        self.current_player_index = 0
-        self.players = players
-        logger.debug(f"Players loaded: {[p.name for p in self.players]}")
-        self.running = True
-        self.active_interface = None
-        self.command_handler = CommandHandler(self)
-        self.voting_manager = VotingManager(self)
-        self.innovation_manager = InnovationManager(self.government)
-        for player in self.players:
-            self.government.add_player(player)
-        logger.debug(f"Players added to government: {len(self.players)}")
-        self.government.initialize()
-        logger.debug("Government initialized")
-        initialize_interfaces(self.government)
-        logger.debug(f"Initial discovered innovations: {self.government.innovation_pool.discovered}")
-        logger.debug(f"Initial assignments: {self.government.assignments}")
-        logger.debug(f"Government type: {self.government.government_type.name}")
-        for player in self.players:
-            logger.debug(f"{player.name}.assigned_roles: {player.assigned_roles}")
 
-    def clear_screen(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
+def build_game(settings, watch: bool = False, saved: Optional[dict] = None, pacer: Optional[Pacer] = None,
+               hud: bool = False) -> Game:
+    engine = GameEngine.from_dict(saved["engine"]) if saved else GameEngine()
+    seeder = random.Random(settings["seed"]) if settings["seed"] is not None else random.Random()
+    if not saved:
+        engine.roll_characters(random.Random(seeder.random()))  # a new game: everyone rolled with dice
+    controllers, observers = {}, []
+    for player in engine.players:
+        if player.controller == "human" and not watch and hud:
+            controllers[player.name] = HUDController(player.name, settings["npc_detail"])
+        elif player.controller == "human" and not watch:
+            controllers[player.name] = TerminalController(player.name, settings["npc_detail"], pacer)
+        else:
+            controllers[player.name] = NPCController(player.name, rng=random.Random(seeder.random()))
+        if saved:
+            controllers[player.name].load_state(saved["controllers"].get(player.name, {}))
+    if not any(c.is_human for c in controllers.values()):
+        observers.append(ConsolePrinter(settings["npc_detail"]))
+    return Game(engine, controllers, observers, pacer=pacer,
+                autosave=None if watch else (lambda g: save_game(g) if g.engine.players else None))
 
-    def do_end_turn(self):
-        """Advance the turn, process year-end events, and trigger managers."""
-        current_player = self.players[self.current_player_index]
-        logger.debug(f"Ending turn for {current_player.name}")
-        for vote in self.voting_manager.active_votes:
-            if vote.is_voting_active() and vote.force_vote and not vote.can_end_turn(current_player):
-                Messages.add(f"You must vote for {vote.role} before ending your turn!")
-                return
-        self.active_interface = None
-        roll, _ = self.government.dice_bag.roll("d20")
-        logger.debug(f"Divine appointment roll: {roll}")
-        if roll == 20:
-            assigned_players = set()
-            for holders in self.government.assignments.values():
-                assigned_players.update(holders)
-            unassigned_players = [p for p in self.players if p not in assigned_players]
-            if unassigned_players:
-                available_roles = [
-                    role for role, reqs in self.government.government_type.title_requirements.items()
-                    if reqs.get("selection_method") == "divine_appointment" and
-                       len(self.government.assignments.get(role, [])) < reqs.get("max_holders", 1)
-                ]
-                if available_roles:
-                    selected_player = random.choice(unassigned_players)
-                    selected_role = random.choice(available_roles)
-                    if self.government.assign_role(selected_role, selected_player):
-                        Messages.add(f"{selected_player.name} has been divinely appointed as {selected_role}")
-                        logger.debug(f"Divinely appointed {selected_player.name} as {selected_role}")
-        self.voting_manager.process_votes()  # Process votes before year advances
-        self.current_player_index = (self.current_player_index + 1) % len(self.players)
-        if self.current_player_index == 0:
-            self.current_year += 1
-            self.government.generate_innovation_points()
-            Messages.add(
-                f"Year {self.current_year} begins. Innovation Points: {self.government.innovation_pool.points}"
-            )
-            logger.debug(f"New year {self.current_year}")
-            self.voting_manager.process_votes()  # Process votes to close nominations and start voting
-            self.innovation_manager.process_turn()
-            self.voting_manager.initiate_votes()
-        logger.debug("Exiting do_end_turn")
 
-    def run(self):
-        """Run the main game loop."""
-        self.clear_screen()
-        Messages.add("Welcome to Government Simulation!")
-        Messages.add(f"Players: {[p.name for p in self.players]}")
-        Messages.add(f"Initial Year: {self.current_year}")
-        self.voting_manager.initiate_votes()
-        while self.running:
-            self.clear_screen()
-            prompt, menu_items = self.command_handler.get_prompt()
-            command = input(prompt).strip().lower()
-            logger.debug(f"Received command: {command}")
-            try:
-                num = int(command)
-                for number, action, key in menu_items:
-                    if number == num:
-                        action()
-                        logger.debug(f"Executed action for command {key}")
-                        break
-                else:
-                    print("\033[91mInvalid selection.\033[0m")
-                    logger.info("Invalid selection entered")
-                    input("Press Enter to continue...")
-            except ValueError:
-                for number, action, key in menu_items:
-                    if command == key:
-                        action()
-                        logger.debug(f"Executed action for command {key}")
-                        break
-                else:
-                    print("\033[91mUnknown command.\033[0m")
-                    logger.info("Unknown command entered")
-                    input("Press Enter to continue...")
+def run_hud(game: Game, max_years: Optional[float]):
+    """Run the game loop in a background thread and the HUD in this one."""
+    import logging
+    from ui.hud import GovGenHUD
+    controller = next(c for c in game.controllers.values() if c.realtime)
+    # Console logging would scribble over the HUD; errors still go to govgen.log.
+    for handler in list(logger.handlers):
+        if type(handler) is logging.StreamHandler:
+            logger.removeHandler(handler)
+    errors = []
+
+    def play():
+        try:
+            game.run(max_years=max_years)
+        except BaseException as e:  # shown after the HUD closes
+            logger.exception("Game loop crashed")
+            errors.append(e)
+
+    thread = threading.Thread(target=play, name="game-loop", daemon=True)
+    thread.start()
+    try:
+        GovGenHUD(controller, game.pacer, thread).run()
+    finally:
+        controller.quit()
+        game.request_stop()
+        thread.join(timeout=10)
+    if errors:
+        raise errors[0]
+
+
+def parse_speed(text: str) -> float:
+    return 0 if text.lower() == "max" else float(text)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="GovGen government simulation")
+    parser.add_argument("--watch", action="store_true", help="make every player an NPC and print what happens")
+    parser.add_argument("--new", action="store_true", help="start a new game instead of continuing the save")
+    parser.add_argument("--years", type=float, help="stop when the game clock reaches this year")
+    parser.add_argument("--speed", type=parse_speed, help="playback speed multiplier, or 'max'")
+    parser.add_argument("--seed", type=int, help="random seed, for repeatable new games")
+    parser.add_argument("--detail", choices=["full", "summary"], help="how much NPC activity to show")
+    parser.add_argument("--classic", action="store_true", help="old scrolling text menus; the game pauses for you")
+    parser.add_argument("--log", help="write every action taken to this file (JSON lines)")
+    args = parser.parse_args()
+
+    settings = load_settings()
+    if args.seed is not None:
+        settings["seed"] = args.seed
+    if args.detail:
+        settings["npc_detail"] = args.detail
+    pacer = Pacer(settings["real_seconds_per_game_year"],
+                  args.speed if args.speed is not None else settings["playback_speed"])
+
+    saved = None
+    summary = None if (args.watch or args.new) else save_summary()
+    if summary:
+        answer = input(f"Continue your saved game from {summary}? [Y/n] ").strip().lower()
+        if answer in ("", "y", "yes"):
+            saved = load_save()
+    if saved:
+        random.setstate(rng_state_from_json(saved["random_state"]))
+    elif settings["seed"] is not None:
+        random.seed(settings["seed"])  # dice and tie-breaks use the global generator
+
+    roster = saved["engine"].get("roster") if saved else None  # a saved game's tribe (births and deaths)
+    humans = [e for e in roster if e.get("controller") == "human"] if roster else \
+        [p for p in default_players if p.controller == "human"]
+    use_hud = not args.watch and not args.classic and len(humans) == 1
+    game = build_game(settings, watch=args.watch, saved=saved, pacer=pacer, hud=use_hud)
+    if args.years is not None:
+        max_years = args.years
+    else:
+        max_years = 50 if args.watch else None
+    try:
+        if use_hud:
+            run_hud(game, max_years)
+        else:
+            game.run(max_years=max_years)
+    except EOFError:
+        print("\nInput ended.")
+    finally:
+        if not args.watch and game.engine.started and not game.engine.players:
+            print(f"\nThe tribe is no more: everyone had died by {format_date(game.engine.clock)}. "
+                  f"The save was left as it was; start again with --new.")
+        elif not args.watch and game.engine.started:
+            save_game(game)
+            print(f"\nGame saved at {format_date(game.engine.clock)} ({SAVE_FILE}).")
+        if args.log:
+            with open(args.log, "w", encoding="utf-8") as f:
+                for entry in game.engine.action_log:
+                    f.write(json.dumps(entry) + "\n")
+            print(f"Wrote {len(game.engine.action_log)} actions to {args.log}")
+        print("Exiting simulation.")
+
 
 if __name__ == "__main__":
-    sim = Simulation()
-    sim.run()
+    main()

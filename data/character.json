@@ -1,0 +1,364 @@
+{
+  "_comment": "Everything a character is made of. Needs: 'death_cause' is what someone dies of when that need empties their health ('starvation'); 'health_loss_per_day' (optional) replaces health.loss_per_day_per_critical_need for that need; 'season_factors' scale how fast it falls by season (Warmth: a season is only 90 days, a twelfth of a day-night cycle, so winter must bite hard to matter); 'no_fire_factors' scale it again while the camp has no fire (winter without a fire is deadly). Add an attribute, skill, need or care action here and the engine, NPCs and HUD pick it up. Needs and care actions run on the day-night cycle (time.json 'day_night_cycle_days'), not on calendar days: 'per_day' means per day-night cycle and 'life_hours' are hours of that cycle (1/24 of it). 'mastery_slowdown': skills grow slower the higher they are (0.85 = at 10/10 growth is 15% of the start).",
+  "attribute_range": [
+    1,
+    10
+  ],
+  "attributes": {
+    "strength": {
+      "name": "Strength",
+      "abbr": "STR",
+      "default": 5,
+      "description": "Raw physical power: carrying, fighting, heavy work."
+    },
+    "dexterity": {
+      "name": "Dexterity",
+      "abbr": "DEX",
+      "default": 5,
+      "description": "Speed, balance and a sure hand: hunting, crafting, scouting."
+    },
+    "constitution": {
+      "name": "Constitution",
+      "abbr": "CON",
+      "default": 5,
+      "description": "Toughness and stamina: resists hunger, cold and exhaustion."
+    },
+    "intelligence": {
+      "name": "Intelligence",
+      "abbr": "INT",
+      "default": 5,
+      "description": "Reasoning, memory and invention."
+    },
+    "wisdom": {
+      "name": "Wisdom",
+      "abbr": "WIS",
+      "default": 5,
+      "description": "Perception, judgement and understanding of nature and people."
+    },
+    "charisma": {
+      "name": "Charisma",
+      "abbr": "CHA",
+      "default": 5,
+      "description": "Presence and persuasion: leading, speaking, being trusted."
+    }
+  },
+  "skill_range": [
+    0,
+    10
+  ],
+  "skills": {
+    "gathering": {
+      "name": "Gathering",
+      "attribute": "wisdom",
+      "description": "Finding edible plants, roots, nuts and berries."
+    },
+    "hunting": {
+      "name": "Hunting",
+      "attribute": "dexterity",
+      "description": "Tracking and taking game."
+    },
+    "combat": {
+      "name": "Combat",
+      "attribute": "strength",
+      "description": "Fighting and defending the group."
+    },
+    "scouting": {
+      "name": "Scouting",
+      "attribute": "wisdom",
+      "description": "Moving unseen and reading the land."
+    },
+    "crafting": {
+      "name": "Crafting",
+      "attribute": "dexterity",
+      "description": "Making tools, weapons and useful things."
+    },
+    "firekeeping": {
+      "name": "Firekeeping",
+      "attribute": "constitution",
+      "description": "Making fire and keeping it alive."
+    },
+    "healing": {
+      "name": "Healing",
+      "attribute": "wisdom",
+      "description": "Herbs, setting bones and tending the sick."
+    },
+    "lore": {
+      "name": "Lore",
+      "attribute": "intelligence",
+      "description": "Stories, customs and the group's memory."
+    },
+    "building": {
+      "name": "Building",
+      "attribute": "strength",
+      "description": "Shelters, stores and gathering places."
+    },
+    "leadership": {
+      "name": "Leadership",
+      "attribute": "charisma",
+      "description": "Organizing others and making decisions stick."
+    },
+    "persuasion": {
+      "name": "Persuasion",
+      "attribute": "charisma",
+      "description": "Talking others round; trading favours."
+    },
+    "fishing": {
+      "name": "Fishing",
+      "attribute": "dexterity",
+      "description": "Spearing, trapping and netting fish."
+    }
+  },
+  "office_skill": "leadership",
+  "training_per_year": 0.2,
+  "talent": {
+    "_comment": "Skills grow faster for the talented: each point of the skill's attribute above 'average' adds 'per_point' (0.1 = 10%) to learning.",
+    "per_point": 0.1,
+    "average": 5
+  },
+  "new_characters": {
+    "_comment": "How a new game rolls everyone's character (players.json then only gives names, ages, descriptions and traits). Each attribute starts at 'attribute_base' (5, average: nobody starts below it) and adds a rolled bonus: the sum of 'attribute_dice' dice with 'sides' sides, plus 'plus' (a bonus below 0 counts as 0), kept within 'attribute_range'. Only illness, age and other effects later in the game take an attribute below the base. Skills start at 0, except the skills of jobs open from the very start (Gatherer's gathering, Firekeeper's firekeeping...), which roll 'open_job_skill_dice' dice of 'open_job_skill_sides' sides plus 'open_job_skill_plus' (at least 0). Set 'random' to false to use the stats in players.json instead.",
+    "random": true,
+    "attribute_base": 5,
+    "attribute_dice": 2,
+    "sides": 3,
+    "plus": -2,
+    "open_job_skill_dice": 1,
+    "open_job_skill_sides": 3,
+    "open_job_skill_plus": -1
+  },
+  "needs": {
+    "food": {
+      "name": "Hunger",
+      "icon": "🍖",
+      "death_cause": "starvation",
+      "decay_per_day": 110,
+      "critical": 15,
+      "levels": [
+        [
+          75,
+          "Full"
+        ],
+        [
+          45,
+          "Peckish"
+        ],
+        [
+          20,
+          "Hungry"
+        ],
+        [
+          0,
+          "Starving"
+        ]
+      ]
+    },
+    "water": {
+      "name": "Thirst",
+      "icon": "💧",
+      "death_cause": "thirst",
+      "decay_per_day": 160,
+      "critical": 15,
+      "levels": [
+        [
+          75,
+          "Quenched"
+        ],
+        [
+          45,
+          "Thirsty"
+        ],
+        [
+          20,
+          "Parched"
+        ],
+        [
+          0,
+          "Dehydrated"
+        ]
+      ]
+    },
+    "energy": {
+      "name": "Energy",
+      "icon": "💤",
+      "death_cause": "exhaustion",
+      "decay_per_day": 100,
+      "critical": 10,
+      "night_factor": 1.3,
+      "levels": [
+        [
+          75,
+          "Rested"
+        ],
+        [
+          45,
+          "Tired"
+        ],
+        [
+          20,
+          "Exhausted"
+        ],
+        [
+          0,
+          "Spent"
+        ]
+      ]
+    },
+    "warmth": {
+      "name": "Warmth",
+      "icon": "🔥",
+      "death_cause": "cold",
+      "decay_per_day": 40,
+      "critical": 15,
+      "health_loss_per_day": 300,
+      "cold_factor_per_degree": 0.08,
+      "warm_gain_per_degree": 30,
+      "season_factors": {"Winter": 5.0, "Autumn": 1.0, "Spring": 1.0, "Summer": 0.08},
+      "no_fire_factors": {"Winter": 2.5, "Autumn": 1.5, "Spring": 1.5},
+      "levels": [
+        [
+          75,
+          "Comfortable"
+        ],
+        [
+          45,
+          "Chilly"
+        ],
+        [
+          20,
+          "Cold"
+        ],
+        [
+          0,
+          "Freezing"
+        ]
+      ]
+    }
+  },
+  "genders": {
+    "_comment": "Everyone has a gender (players.json 'gender'; newborns by life.json 'birth.genders'). 'bears_children': may become pregnant (life.json 'pregnancy').",
+    "female": {"name": "Female", "icon": "♀", "bears_children": true, "child": "daughter"},
+    "male": {"name": "Male", "icon": "♂", "bears_children": false, "child": "son"}
+  },
+  "constitution_resists": 0.04,
+  "health": {
+    "max": 100,
+    "loss_per_day_per_critical_need": 60,
+    "regen_per_day": 40,
+    "regen_when_all_above": 45,
+    "collapse_rest_days": 30,
+    "collapse_restores": 40,
+    "collapse_restores_needs": [
+      "energy",
+      "warmth"
+    ],
+    "at_zero": "death",
+    "regen_factors": {
+      "work": 0.0,
+      "awake": 1.0,
+      "rest": 1.5,
+      "sleep": 1.5,
+      "treatment": 1.5
+    },
+    "_comment": "A need below 'critical' costs health ('loss_per_day_per_critical_need', or the need's own 'health_loss_per_day'). 'at_zero': what health at 0 means. 'death' (since 2026-11-16): the person dies, whether of illness, starvation, thirst or cold (the need's 'death_cause'); there is no collapse. 'collapse' (the old rule): the person rests 'collapse_rest_days' and gets back 'collapse_restores' health and that much of each need in 'collapse_restores_needs' (food and water must come from somewhere: a collapse does not feed anyone), except that a fatal illness (life.json 'illnesses') still kills. While ill, health doesn't come back at all. 'regen_factors': how fast health comes back by what someone is doing, as a share of 'regen_per_day': 'work' (working or crafting: not at all), 'awake' (up and about: eating, politics, playing), 'rest' (resting at home, recovering), 'sleep', 'treatment' (being tended by a healer)."
+  },
+  "body_temperature": {
+    "need": "warmth",
+    "at_zero": 33.0,
+    "at_full": 37.0
+  },
+  "care_actions": {
+    "_comment": "Each takes 'life_hours' of the day-night cycle (0 = instant) and restores its needs gradually over that time. 'factors' scale how fast other needs fall meanwhile (sleeping slows hunger and thirst). 'at_camp': warmed by the fire, if there is one. 'needs_amenity': only possible when an occupation provides it (see occupations.json 'provides'). 'announce' is how the chronicle describes it. 'scaled_by_quality': restores less when that society quality is low (a meal is smaller when food is scarce). 'consumes': true means the action eats or drinks items (items.json) whose 'use' restores its needs, from the person's own pack first, then the camp store; it restores only what was eaten, and is impossible with nothing to eat or drink. 'max_share' (with 'consumes'): the most one sitting can restore, as a share of 'restores' (1.5 = a feast is half again a meal). 'quality_floor' (with 'scaled_by_quality'): what is left of the effect when that quality is 0.",
+    "eat": {
+      "label": "Eat a meal",
+      "announce": "sits down to eat",
+      "life_hours": 0.5,
+      "restores": {
+        "food": 70
+      },
+      "at_camp": true,
+      "consumes": true,
+      "max_share": 1.5
+    },
+    "drink": {
+      "label": "Drink water",
+      "announce": "drinks water",
+      "life_hours": 0,
+      "restores": {
+        "water": 80
+      },
+      "consumes": true,
+      "max_share": 1.5
+    },
+    "sleep": {
+      "label": "Sleep",
+      "announce": "lies down to sleep",
+      "life_hours": 8,
+      "restores": {
+        "energy": 100
+      },
+      "factors": {
+        "food": 0.3,
+        "water": 0.3,
+        "energy": 0
+      },
+      "at_camp": true,
+      "interruptible": true
+    },
+    "warm_up": {
+      "label": "Warm up by the fire",
+      "announce": "warms up by the fire",
+      "life_hours": 1,
+      "restores": {
+        "warmth": 60
+      },
+      "requires": [
+        "Fire"
+      ],
+      "needs_amenity": "fire",
+      "at_camp": true,
+      "interruptible": true
+    }
+  },
+  "life_stages": [
+    [
+      0,
+      "Child"
+    ],
+    [
+      16,
+      "Adult"
+    ],
+    [
+      50,
+      "Old"
+    ]
+  ],
+  "aging": [
+    {
+      "attributes": [
+        "strength",
+        "dexterity",
+        "constitution"
+      ],
+      "from_age": 55,
+      "every_years": 6,
+      "change": -1
+    },
+    {
+      "attributes": [
+        "wisdom"
+      ],
+      "from_age": 30,
+      "every_years": 10,
+      "change": 1
+    }
+  ],
+  "resting": {
+    "_comment": "Waiting at home between other things.",
+    "factors": {
+      "energy": 0.5
+    },
+    "at_camp": true
+  },
+  "mastery_slowdown": 0.85
+}

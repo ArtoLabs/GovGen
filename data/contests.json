@@ -1,0 +1,267 @@
+{
+  "defender_contentment": {
+    "_comment": "How hard a holder can defend their office, by the tribe's average contentment with its 'meter' (Leaders): the holder's rallies against a persuasion campaign and their speeches in an oration are multiplied by this curve [meter, multiplier]. A leader the tribe is fed up with can hardly hold on (x0.2 at 20); a well-liked one defends a little better than usual.",
+    "meter": "leaders",
+    "curve": [[20, 0.2], [35, 0.4], [50, 0.8], [60, 1.0], [80, 1.2]]
+  },
+  "_comment": "Ways to take an office other than an election. Each office in data/governments says which it allows, in 'contested_by': {\"persuasion\": true, \"challenge\": [\"oration\", \"fight\", \"skill\"]} ('skill' = a skill contest in the challenger's own line of work). Times are hours of the day-night cycle. Meters run 0-100. Power in a contest = the weighted attributes + skill_weight x the skill. 'defender_standing': the office holder's edge in a challenge (0.15 = 15% stronger). Cooldowns: a challenger who loses waits 'cooldown_life_days' day-night cycles before starting another campaign or challenge (a winner doesn't); the holder can't be contested again for 'defender_rest_life_days' (0 = at once: only the loser waits; a new office holder has a grace period instead, time.json 'office_grace_life_days'). 'chosen_by': 'defender' means the one challenged picks the contest (any the office allows; 'skill' = a contest in the defender's own work) within 'answer_life_hours', or the one they are best at is picked for them. 'practice': skill points both contestants gain (win or lose). 'during_contest' says what contestants may still do while a challenge runs; in an audience contest (oration, storytelling) both sides 'speak' to individual listeners (press P), each speech taking 'speak.life_hours' and moving that listener by about 'speak.gain' x their contest strength. 'persuasion.resistance.min'/'max' bound how open a listener can be. 'luck': the role of chance (see its comment).",
+  "skill_weight": 0.5,
+  "persuasion": {
+    "name": "Persuasion",
+    "description": "Win the tribe over, one person at a time, until they accept you in the office.",
+    "life_hours": 6,
+    "announce_life_hours": 0.25,
+    "attributes": {
+      "charisma": 1.0,
+      "intelligence": 0.3
+    },
+    "skill": "persuasion",
+    "start_meter": 15,
+    "start_per_charisma": 3,
+    "passive_per_day": 30,
+    "canvass": {
+      "life_hours": 0.5,
+      "gain": 22,
+      "min_gain": 1
+    },
+    "rally": {
+      "life_hours": 0.5,
+      "loss": 22
+    },
+    "resistance": {
+      "holder": 0.15,
+      "same_office": 0.6,
+      "per_wisdom": 0.07,
+      "min": 0.3,
+      "max": 1.6
+    },
+    "success_at": 50,
+    "randomness": 8,
+    "cooldown_life_days": 0.5,
+    "skill_practice": 0.3,
+    "practice_per_conversation": 0.06,
+    "unrest": {
+      "_comment": "A campaign starts easier against failing leadership. Each listener starts with extra persuasion of 'per_point' for each point their 'meter' (society.json satisfaction) is below 'neutral'; everyone starts with 'holder_per_point' more for each point the holder's office quality is below 'holder_neutral'. The holder's rally works on a listener in proportion to their meter / 'neutral' (between 'rally_min' and 'rally_max'), and can never push anyone below where they started the campaign. A speech always moves a listener at least 'canvass.min_gain'.",
+      "meter": "leaders",
+      "neutral": 60,
+      "per_point": 0.7,
+      "holder_neutral": 50,
+      "holder_per_point": 0.4,
+      "rally_min": 0.3,
+      "rally_max": 1.2
+    }
+  },
+  "challenge": {
+    "cooldown_life_days": 0.5,
+    "defender_rest_life_days": 0,
+    "skill_practice": 0.2,
+    "kinds": {
+      "oration": {
+        "name": "Challenge of oration",
+        "icon": "📢",
+        "description": "Both speak before the tribe; listeners lean one way or the other.",
+        "style": "audience",
+        "life_hours": 2,
+        "attributes": {
+          "charisma": 1.0,
+          "intelligence": 0.4
+        },
+        "skill": "persuasion",
+        "swing_per_day": 2.5,
+        "practice": 0.6
+      },
+      "fight": {
+        "name": "Ritual fight",
+        "icon": "🤼",
+        "description": "A ritual bout, not to the death: whoever is driven back and yields loses.",
+        "style": "duel",
+        "life_hours": 0.5,
+        "attributes": {
+          "strength": 1.0,
+          "dexterity": 0.6,
+          "constitution": 0.6
+        },
+        "skill": "combat",
+        "swing_per_day": 30,
+        "yield_at": 12,
+        "injury": {
+          "winner": 8,
+          "loser": 25,
+          "min_health": 15
+        }
+      },
+      "hunt": {
+        "name": "Hunting contest",
+        "icon": "🦌",
+        "skill_contest": true,
+        "description": "Both go out hunting; whoever brings back the largest animal wins.",
+        "style": "best",
+        "unit": "kg",
+        "scale": 120,
+        "finds_per_hour": 0.5,
+        "life_hours": 6,
+        "attributes": {
+          "dexterity": 1.0,
+          "wisdom": 0.6,
+          "strength": 0.4
+        },
+        "skill": "hunting"
+      },
+      "gather": {
+        "name": "Gathering contest",
+        "icon": "🧺",
+        "skill_contest": true,
+        "description": "Both go out gathering; whoever brings back the most food wins.",
+        "style": "total",
+        "unit": "baskets",
+        "scale": 1.0,
+        "finds_per_hour": 2,
+        "life_hours": 6,
+        "attributes": {
+          "wisdom": 1.0,
+          "constitution": 0.5
+        },
+        "skill": "gathering"
+      },
+      "craft": {
+        "name": "Crafting contest",
+        "icon": "🪚",
+        "skill_contest": true,
+        "description": "Both make a tool; the finer piece wins.",
+        "style": "best",
+        "unit": "quality",
+        "scale": 10,
+        "finds_per_hour": 1,
+        "life_hours": 4,
+        "attributes": {
+          "dexterity": 1.0,
+          "intelligence": 0.6
+        },
+        "skill": "crafting"
+      },
+      "scout": {
+        "name": "Scouting contest",
+        "icon": "🐾",
+        "skill_contest": true,
+        "description": "Both range out; whoever returns with the most useful news wins.",
+        "style": "total",
+        "unit": "sightings",
+        "scale": 1.0,
+        "finds_per_hour": 1,
+        "life_hours": 4,
+        "attributes": {
+          "wisdom": 1.0,
+          "dexterity": 0.6
+        },
+        "skill": "scouting"
+      },
+      "lore": {
+        "name": "Storytelling contest",
+        "icon": "📯",
+        "skill_contest": true,
+        "description": "Both tell the old stories; the tribe judges who tells them truest.",
+        "style": "audience",
+        "life_hours": 2,
+        "attributes": {
+          "intelligence": 1.0,
+          "charisma": 0.6
+        },
+        "skill": "lore",
+        "swing_per_day": 2.5,
+        "practice": 0.4,
+        "also_practice": {
+          "persuasion": 0.3
+        }
+      },
+      "build": {
+        "name": "Building contest",
+        "icon": "🛖",
+        "skill_contest": true,
+        "description": "Both raise a shelter; the sturdier one wins.",
+        "style": "best",
+        "unit": "quality",
+        "scale": 10,
+        "finds_per_hour": 0.5,
+        "life_hours": 6,
+        "attributes": {
+          "strength": 1.0,
+          "intelligence": 0.6
+        },
+        "skill": "building"
+      },
+      "heal": {
+        "name": "Healing contest",
+        "icon": "🌿",
+        "skill_contest": true,
+        "description": "Both tend the sick; whoever helps more people wins.",
+        "style": "total",
+        "unit": "patients",
+        "scale": 1.0,
+        "finds_per_hour": 0.8,
+        "life_hours": 4,
+        "attributes": {
+          "wisdom": 1.0,
+          "intelligence": 0.6
+        },
+        "skill": "healing"
+      }
+    },
+    "defender_standing": 0.15,
+    "chosen_by": "defender",
+    "answer_life_hours": 1,
+    "speak": {
+      "life_hours": 0.25,
+      "gain": 20,
+      "practice": 0.04
+    },
+    "during_contest": {
+      "_comment": "What the two contestants may do while a challenge runs, by its style. 'locked': they can do nothing else until it ends. 'may': action types, 'care:<kind>' for one care action, and 'speak' (address a listener in an audience contest; the challenger wins them over, the defender pulls them back). Short waits are always allowed.",
+      "audience": {
+        "may": [
+          "speak",
+          "care:eat",
+          "care:drink",
+          "care:warm_up",
+          "vote",
+          "decline_nomination"
+        ]
+      },
+      "duel": {
+        "locked": true
+      },
+      "best": {
+        "may": [
+          "care:eat",
+          "care:drink",
+          "vote",
+          "decline_nomination"
+        ]
+      },
+      "total": {
+        "may": [
+          "care:eat",
+          "care:drink",
+          "vote",
+          "decline_nomination"
+        ]
+      }
+    }
+  },
+  "luck": {
+    "_comment": "How much chance there is in contests. Each is a random factor of 1 +/- the value: 'speech' (one canvass, rally or speech to a listener), 'audience' (each moment of an oration, per side), 'duel' (each moment of a fight, per side). 'listener_bias': each listener in an oration starts leaning up to this many points to one side. 'find_size': the range a find is multiplied by in skill contests, for 'best' (largest wins) and 'total' (most wins).",
+    "speech": 0.3,
+    "audience": 0.7,
+    "duel": 0.8,
+    "listener_bias": 12,
+    "find_size": {
+      "best": [
+        0.2,
+        1.0
+      ],
+      "total": [
+        0.5,
+        1.5
+      ]
+    }
+  }
+}

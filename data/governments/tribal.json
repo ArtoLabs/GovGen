@@ -1,0 +1,138 @@
+{
+  "key": "tribal",
+  "name": "Tribal",
+  "age": "tribal",
+  "description": "A small kin group. Elders hold its memory and customs; a Clan Leader coordinates daily life by persuasion.",
+  "requires": [
+    "Tribalism"
+  ],
+  "reformed_by": {
+    "method": "tribe_vote"
+  },
+  "max_offices_per_player": 1,
+  "member_interfaces": [
+    "infrastructure"
+  ],
+  "member_points": 1,
+  "offices": {
+    "Clan Leader": {
+      "description": "Coordinates the group's daily life and speaks for it. Leads by persuasion, not force.",
+      "seats": 1,
+      "interfaces": [
+        "leadership",
+        "economic"
+      ],
+      "points": 5,
+      "authority": 3,
+      "selected_by": {
+        "method": "council_vote",
+        "council": "Elder",
+        "fallback": "tribe_vote"
+      },
+      "removed_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      },
+      "contested_by": {
+        "persuasion": true,
+        "challenge": [
+          "oration",
+          "fight",
+          "skill"
+        ]
+      },
+      "quality": {
+        "attributes": {
+          "charisma": 1.0,
+          "wisdom": 0.8,
+          "intelligence": 0.5
+        },
+        "skill": "leadership"
+      }
+    },
+    "Elder": {
+      "description": "Keeps the group's memory and customs, and settles disputes.",
+      "seats": 3,
+      "interfaces": [
+        "judicial",
+        "legislative"
+      ],
+      "points": 3,
+      "authority": 2,
+      "selected_by": {
+        "method": "tribe_vote"
+      },
+      "removed_by": {
+        "method": "tribe_vote"
+      },
+      "contested_by": {
+        "persuasion": true,
+        "challenge": [
+          "oration",
+          "skill"
+        ]
+      },
+      "quality": {
+        "attributes": {
+          "wisdom": 1.0,
+          "intelligence": 0.8,
+          "charisma": 0.3
+        },
+        "skill": "lore"
+      }
+    },
+    "Spirit Keeper": {
+      "description": "Tends to the spiritual life of the group: its rituals, gatherings and healing.",
+      "seats": 1,
+      "interfaces": [
+        "religious",
+        "civic_representation"
+      ],
+      "points": 3,
+      "authority": 1,
+      "selected_by": {
+        "method": "divine_sign",
+        "chance": 0.3
+      },
+      "removed_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      },
+      "contested_by": {
+        "persuasion": true,
+        "challenge": [
+          "oration"
+        ]
+      },
+      "quality": {
+        "attributes": {
+          "wisdom": 1.0,
+          "charisma": 0.7
+        },
+        "skill": "healing"
+      }
+    }
+  },
+  "statuses": {
+    "Outcast": {
+      "description": "Cast out of the group. Holds no office and has no voice.",
+      "requires": [
+        "Ostracism"
+      ],
+      "granted_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      },
+      "revoked_by": {
+        "method": "council_vote",
+        "council": "Elder"
+      },
+      "effects": [
+        "loses_office",
+        "cannot_hold_office",
+        "cannot_vote",
+        "no_member_interfaces"
+      ]
+    }
+  }
+}

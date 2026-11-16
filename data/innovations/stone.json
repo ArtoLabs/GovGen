@@ -1,0 +1,31 @@
+{
+  "age": "stone",
+  "innovations": [
+    {"name": "Hereditary Rule", "icon": "👑", "interface": "leadership", "cost": 25, "prerequisites": ["Chieftainship"], "description": "Power passed through family lineage."},
+    {"name": "Warrior Command", "icon": "📯", "interface": "leadership", "cost": 25, "prerequisites": ["Hierarchy"], "description": "Organized leadership for armed forces."},
+    {"name": "Centralized Authority", "icon": "🏯", "interface": "leadership", "cost": 20, "prerequisites": ["Hierarchy"], "description": "Unified control over several groups."},
+    {"name": "Divine Right", "icon": "🌟", "interface": "leadership", "cost": 25, "prerequisites": ["Chieftainship"], "description": "Leaders chosen by divine will."},
+    {"name": "Distribution", "icon": "🥖", "interface": "leadership", "cost": 25, "prerequisites": ["Chieftainship", "Storage", "Oral History", "Forest Gardening"], "description": "Leaders distribute stored goods to the community."},
+    {"name": "Kinship Lineages", "icon": "🌳", "interface": "leadership", "cost": 25, "prerequisites": ["Chieftainship", "Hierarchy", "Hereditary Rule"], "description": "Recognized family lines that shape status and who may lead."},
+    {"name": "Personal Adornment", "icon": "💍", "interface": "leadership", "cost": 25, "prerequisites": ["Chieftainship", "Symbolism", "Ceremonies"], "description": "Begins to create a separation of classes."},
+
+    {"name": "Warriors", "icon": "🪓", "interface": "military", "cost": 20, "prerequisites": ["Warrior Command"], "description": "Ability to recognize warriors within the community."},
+    {"name": "Tactical Coordination", "icon": "🧭", "interface": "military", "cost": 15, "prerequisites": ["Warriors"], "description": "Warriors can perform more complex coordinated tactics."},
+    {"name": "Weapon Crafting", "icon": "🔨", "interface": "military", "cost": 15, "prerequisites": ["Toolmaking", "Warriors"], "description": "Advanced tools for combat."},
+    {"name": "Fortifications", "icon": "🧱", "interface": "military", "cost": 25, "prerequisites": ["Toolmaking", "Warriors", "Domestication"], "description": "Defensive structures like walls."},
+    {"name": "Battle Formations", "icon": "🏹", "interface": "military", "cost": 18, "prerequisites": ["Tactical Coordination"], "description": "Coordinated warrior maneuvers."},
+
+    {"name": "Information Gathering", "icon": "👂", "interface": "intelligence", "cost": 18, "prerequisites": ["Language"], "description": "Systematic spying and reporting."},
+    {"name": "Scouting Networks", "icon": "🔭", "interface": "intelligence", "cost": 20, "prerequisites": ["Information Gathering"], "description": "Organized reconnaissance teams."},
+
+    {"name": "Domestication", "icon": "🐄", "interface": "economic", "cost": 10, "prerequisites": ["Tribalism", "Forest Gardening"], "description": "The taming of animals and plants."},
+    {"name": "Property", "icon": "🏠", "interface": "economic", "cost": 10, "prerequisites": ["Domestication"], "description": "Exclusive claim to objects."},
+    {"name": "Trade", "icon": "📦", "interface": "economic", "cost": 10, "prerequisites": ["Barter System", "Distribution"], "description": "Trade between communities."},
+    {"name": "Token Exchange", "icon": "🪙", "interface": "economic", "cost": 10, "prerequisites": ["Trade"], "description": "A precursor to money."},
+
+    {"name": "Storage", "icon": "🏺", "interface": "infrastructure", "cost": 20, "prerequisites": ["Toolmaking", "Domestication", "Sustenance Gardening"], "description": "Keeps food longer."},
+    {"name": "Irrigation", "icon": "💧", "interface": "infrastructure", "cost": 20, "prerequisites": ["Toolmaking", "Sustenance Gardening"], "description": "Water management for agriculture."},
+    {"name": "Agriculture", "icon": "🌾", "interface": "infrastructure", "cost": 20, "prerequisites": ["Toolmaking", "Irrigation"], "description": "Producing more food than is needed to survive."},
+    {"name": "Metalworking", "icon": "🔩", "interface": "infrastructure", "cost": 30, "prerequisites": ["Stone Cutting", "Agriculture"], "description": "Smelting and shaping soft metals such as copper."}
+  ]
+}

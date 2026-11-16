@@ -1,0 +1,77 @@
+{
+  "_comment": "The game calendar and how long things take, in game time. Playback speed (real seconds per game year) is in settings.json. 'news_travel_days': someone resting at home hears that nominations or voting have opened within this many days. 'start_after_dawn': the game begins this share of a day-night cycle after dawn. 'office_grace_life_days': someone who has just taken an office (by election, appointment, persuasion or challenge) can't be persuaded against, challenged or voted out for this many day-night cycles: a chance to prove themselves.",
+  "days_per_year": 360,
+  "seasons": [
+    "Spring",
+    "Summer",
+    "Autumn",
+    "Winter"
+  ],
+  "action_hours": {
+    "vote": 2,
+    "nominate": 4,
+    "research": 12,
+    "appoint": 24,
+    "dismiss": 24,
+    "call_vote": 24,
+    "role_command": 24,
+    "reform": 72,
+    "take_occupation": 24,
+    "leave_occupation": 12,
+    "decline_nomination": 4,
+    "resign": 12,
+    "release": 12
+  },
+  "wait_days": [
+    1,
+    3,
+    7,
+    14,
+    30,
+    60,
+    90
+  ],
+  "nomination_days": 30,
+  "voting_days": 30,
+  "motion_days": 30,
+  "reform_cooldown_years": 3,
+  "innovation_cost_multiplier": 13,
+  "day_night_cycle_days": 1080,
+  "dawn": 0.25,
+  "dusk": 0.75,
+  "news_travel_days": 5,
+  "start_after_dawn": 0.02,
+  "while_busy": {
+    "_comment": "Politics runs on days, work on hours of the day-night cycle, so they don't get in each other's way: someone busy with one of 'during' (work, craft, wait = resting at home, care:<action>) may still do 'actions' at once, without breaking off what they are doing. NPCs consider it every 'npc_check_days' days while busy when a ballot or challenge waits on them, otherwise every 'npc_check_days_otherwise' days. Talking to someone on the side (canvass, rally, a speech) still takes its time: the next such talk waits until the last one would have ended.",
+    "actions": [
+      "vote",
+      "nominate",
+      "decline_nomination",
+      "persuade",
+      "challenge",
+      "answer_challenge",
+      "appoint",
+      "dismiss",
+      "call_vote",
+      "reform",
+      "research",
+      "role_command",
+      "resign",
+      "canvass",
+      "rally",
+      "release"
+    ],
+    "during": [
+      "work",
+      "craft",
+      "wait",
+      "care:eat",
+      "care:drink",
+      "care:warm_up",
+      "treat"
+    ],
+    "npc_check_days": 5,
+    "npc_check_days_otherwise": 30
+  },
+  "office_grace_life_days": 1
+}

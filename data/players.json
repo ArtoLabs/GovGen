@@ -1,0 +1,382 @@
+{
+  "_comment": "Players in turn order. Add or remove entries to change the starting tribe (at least two). 'controller' is 'human' (played at this keyboard) or 'npc' (the default). 'gender' is one of character.json 'genders'. 'mother' (optional) names another player: the person's mother, who knows her own children (used when you play on after a death). 'birthday' (optional, 0-359) is the day of the year they grow a year older; otherwise one is picked. 'attributes' and 'skills' use the names in character.json; anything left out gets the default (with character.json 'new_characters.random', a new game rolls them instead; children below life.json 'work_age' get only part of the roll, the part their childhood so far would have given them). 'inventory' lists items (items.json) this person carries at the start, on top of items.json 'starting_inventory'.",
+  "players": [
+    {
+      "name": "Alice",
+      "controller": "human",
+      "age": 26,
+      "gender": "female",
+      "description": "A strategic thinker with a calm demeanor.",
+      "attributes": {
+        "strength": 5,
+        "dexterity": 6,
+        "constitution": 5,
+        "intelligence": 9,
+        "wisdom": 8,
+        "charisma": 7
+      },
+      "skills": {
+        "leadership": 2,
+        "lore": 2
+      },
+      "traits": [
+        "rational",
+        "diplomatic"
+      ]
+    },
+    {
+      "name": "Bob",
+      "age": 34,
+      "gender": "male",
+      "description": "A bold orator with a strong sense of justice.",
+      "attributes": {
+        "strength": 6,
+        "dexterity": 5,
+        "constitution": 6,
+        "intelligence": 6,
+        "wisdom": 5,
+        "charisma": 9
+      },
+      "skills": {
+        "persuasion": 3,
+        "leadership": 2
+      },
+      "traits": [
+        "passionate",
+        "justice-driven"
+      ]
+    },
+    {
+      "name": "Cleo",
+      "age": 21,
+      "gender": "female",
+      "description": "A quiet tactician who prefers shadows over spotlight.",
+      "attributes": {
+        "strength": 7,
+        "dexterity": 8,
+        "constitution": 6,
+        "intelligence": 8,
+        "wisdom": 7,
+        "charisma": 5
+      },
+      "skills": {
+        "scouting": 3,
+        "hunting": 2
+      },
+      "traits": [
+        "introverted",
+        "calculating"
+      ],
+      "inventory": [
+        {
+          "item": "meat",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "Dmitri",
+      "age": 40,
+      "gender": "male",
+      "description": "A weathered warrior with deep roots in tradition, old by the tribe's measure.",
+      "attributes": {
+        "strength": 9,
+        "dexterity": 6,
+        "constitution": 8,
+        "intelligence": 5,
+        "wisdom": 6,
+        "charisma": 6
+      },
+      "skills": {
+        "combat": 4,
+        "hunting": 2
+      },
+      "traits": [
+        "conservative",
+        "respected"
+      ],
+      "inventory": [
+        {
+          "item": "stone",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "name": "Esi",
+      "age": 24,
+      "gender": "female",
+      "description": "A healer who notices what others overlook.",
+      "attributes": {
+        "strength": 4,
+        "dexterity": 6,
+        "constitution": 5,
+        "intelligence": 8,
+        "wisdom": 9,
+        "charisma": 6
+      },
+      "skills": {
+        "healing": 3,
+        "gathering": 2
+      },
+      "traits": [
+        "observant",
+        "caring"
+      ],
+      "inventory": [
+        {
+          "item": "water",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "Farid",
+      "age": 36,
+      "gender": "male",
+      "description": "A trader who knows the value of every favor.",
+      "attributes": {
+        "strength": 5,
+        "dexterity": 5,
+        "constitution": 5,
+        "intelligence": 7,
+        "wisdom": 6,
+        "charisma": 8
+      },
+      "skills": {
+        "persuasion": 3,
+        "gathering": 1
+      },
+      "traits": [
+        "shrewd",
+        "sociable"
+      ]
+    },
+    {
+      "name": "Greta",
+      "age": 42,
+      "gender": "female",
+      "description": "The eldest of the tribe: keeper of old stories and older grudges.",
+      "attributes": {
+        "strength": 3,
+        "dexterity": 4,
+        "constitution": 5,
+        "intelligence": 7,
+        "wisdom": 8,
+        "charisma": 5
+      },
+      "skills": {
+        "lore": 4,
+        "healing": 1
+      },
+      "traits": [
+        "traditional",
+        "stubborn"
+      ]
+    },
+    {
+      "name": "Hiro",
+      "age": 17,
+      "gender": "male",
+      "description": "A restless toolmaker always trying something new.",
+      "attributes": {
+        "strength": 6,
+        "dexterity": 8,
+        "constitution": 6,
+        "intelligence": 9,
+        "wisdom": 5,
+        "charisma": 4
+      },
+      "skills": {
+        "crafting": 3,
+        "firekeeping": 1
+      },
+      "traits": [
+        "inventive",
+        "impatient"
+      ],
+      "inventory": [
+        {
+          "item": "stone",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "name": "Imani",
+      "age": 29,
+      "gender": "female",
+      "description": "A hunter respected for her fairness.",
+      "attributes": {
+        "strength": 8,
+        "dexterity": 7,
+        "constitution": 7,
+        "intelligence": 6,
+        "wisdom": 6,
+        "charisma": 7
+      },
+      "skills": {
+        "hunting": 4,
+        "scouting": 1
+      },
+      "traits": [
+        "fair",
+        "brave"
+      ],
+      "inventory": [
+        {
+          "item": "meat",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "Joao",
+      "age": 15,
+      "gender": "male",
+      "description": "A young firebrand eager to prove himself.",
+      "attributes": {
+        "strength": 7,
+        "dexterity": 6,
+        "constitution": 7,
+        "intelligence": 5,
+        "wisdom": 3,
+        "charisma": 8
+      },
+      "skills": {
+        "combat": 2,
+        "hunting": 1
+      },
+      "traits": [
+        "ambitious",
+        "reckless"
+      ]
+    },
+    {
+      "name": "Kalani",
+      "age": 32,
+      "gender": "male",
+      "description": "A builder who plans for the next generation.",
+      "attributes": {
+        "strength": 7,
+        "dexterity": 6,
+        "constitution": 7,
+        "intelligence": 7,
+        "wisdom": 7,
+        "charisma": 6
+      },
+      "skills": {
+        "building": 3,
+        "crafting": 1
+      },
+      "traits": [
+        "patient",
+        "practical"
+      ],
+      "inventory": [
+        {
+          "item": "wood",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "name": "Leila",
+      "age": 22,
+      "gender": "female",
+      "description": "A mediator who can calm any argument.",
+      "attributes": {
+        "strength": 4,
+        "dexterity": 5,
+        "constitution": 5,
+        "intelligence": 7,
+        "wisdom": 8,
+        "charisma": 9
+      },
+      "skills": {
+        "persuasion": 3,
+        "lore": 1
+      },
+      "traits": [
+        "empathetic",
+        "persuasive"
+      ]
+    },
+    {
+      "name": "Tomas",
+      "age": 8,
+      "gender": "male",
+      "mother": "Alice",
+      "description": "A boy who can't wait to hunt like the grown-ups.",
+      "attributes": {
+        "strength": 6,
+        "dexterity": 6,
+        "constitution": 5,
+        "intelligence": 5,
+        "wisdom": 5,
+        "charisma": 5
+      },
+      "traits": [
+        "ambitious",
+        "reckless"
+      ]
+    },
+    {
+      "name": "Noor",
+      "age": 7,
+      "gender": "female",
+      "mother": "Imani",
+      "description": "A curious girl who follows the gatherers everywhere.",
+      "attributes": {
+        "strength": 5,
+        "dexterity": 5,
+        "constitution": 5,
+        "intelligence": 6,
+        "wisdom": 6,
+        "charisma": 5
+      },
+      "traits": [
+        "observant",
+        "caring"
+      ]
+    },
+    {
+      "name": "Suki",
+      "age": 4,
+      "gender": "female",
+      "mother": "Esi",
+      "description": "A quiet little girl who watches everything.",
+      "attributes": {
+        "strength": 5,
+        "dexterity": 5,
+        "constitution": 5,
+        "intelligence": 5,
+        "wisdom": 5,
+        "charisma": 5
+      },
+      "traits": [
+        "observant",
+        "patient"
+      ]
+    },
+    {
+      "name": "Ravi",
+      "age": 1,
+      "gender": "male",
+      "mother": "Leila",
+      "description": "A baby, mostly asleep or hungry.",
+      "attributes": {
+        "strength": 5,
+        "dexterity": 5,
+        "constitution": 5,
+        "intelligence": 5,
+        "wisdom": 5,
+        "charisma": 5
+      },
+      "traits": [
+        "passionate",
+        "inventive"
+      ]
+    }
+  ]
+}

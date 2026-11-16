@@ -1,23 +1,7 @@
-from innovations.innovation import (
-    LEADERSHIP_INNOVATIONS,
-    MILITARY_INNOVATIONS,
-    LEGISLATIVE_INNOVATIONS,
-    JUDICIAL_INNOVATIONS,
-    INTELLIGENCE_INNOVATIONS,
-    ECONOMIC_INNOVATIONS,
-    INFRASTRUCTURE_INNOVATIONS,
-    RELIGIOUS_INNOVATIONS,
-    CIVIC_REPRESENTATION_INNOVATIONS,
-)
+from typing import Dict, List
+from innovations.innovation import ALL_INNOVATIONS, INTERFACE_ICONS, Innovation
 
-ROLE_INNOVATION_MAP = {
-    "leadership": LEADERSHIP_INNOVATIONS,
-    "military": MILITARY_INNOVATIONS,
-    "legislative": LEGISLATIVE_INNOVATIONS,
-    "judicial": JUDICIAL_INNOVATIONS,
-    "intelligence": INTELLIGENCE_INNOVATIONS,
-    "economic": ECONOMIC_INNOVATIONS,
-    "infrastructure": INFRASTRUCTURE_INNOVATIONS,
-    "religious": RELIGIOUS_INNOVATIONS,
-    "civic_representation": CIVIC_REPRESENTATION_INNOVATIONS,
-}
+# Interface key -> innovations that interface can research, built from the data files.
+ROLE_INNOVATION_MAP: Dict[str, List[Innovation]] = {key: [] for key in INTERFACE_ICONS}
+for _innovation in ALL_INNOVATIONS.values():
+    ROLE_INNOVATION_MAP[_innovation.interface].append(_innovation)

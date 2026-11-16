@@ -1,7 +1,7 @@
 """Contests: taking an office by persuasion or by challenge, instead of by election.
 
-Rules and numbers come from data/contests.json; which offices allow which contests comes from each
-office's 'contested_by' in data/governments. Two families:
+Rules and numbers come from data/rules/contests.json; which offices allow which contests comes from each
+office's 'contested_by' in data/ages/<age>/governments. Two families:
 
   Persuasion  A campaign lasting some hours of the day-night cycle. Every member of the tribe gets a
               persuasion meter (0-100) that exists only while the campaign runs. It creeps up on its
@@ -19,15 +19,24 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from utils import game_data
+from utils.game_data import RULES_DIR
 from utils.data_files import DATA_DIR, load_json, require
 from utils.messages import Messages
 from world.character import RULES as CHARACTER
 
-_data = load_json(DATA_DIR / "contests.json") if (DATA_DIR / "contests.json").exists() else {}
-SKILL_WEIGHT: float = _data.get("skill_weight", 0.5)
-PERSUASION: Dict[str, Any] = _data.get("persuasion", {})
-CHALLENGE: Dict[str, Any] = _data.get("challenge", {})
-LUCK: Dict[str, Any] = _data.get("luck", {})
+# data/rules/contests.json as it is in every age; an age or a government may change any of it (use_rules below
+# refills these tables in place).
+BASE_RULES: Dict[str, Any] = load_json(RULES_DIR / "contests.json")
+_data: Dict[str, Any] = BASE_RULES
+SKILL_WEIGHT: float = 0.5
+PERSUASION: Dict[str, Any] = {}
+CHALLENGE: Dict[str, Any] = {}
+LUCK: Dict[str, Any] = {}
+CHALLENGE_KINDS: Dict[str, "ChallengeKind"] = {}
+SPEAK: Dict[str, Any] = {}
+DURING_CONTEST: Dict[str, Any] = {}
+DEFENDER_CHOOSES: bool = False
 _LUCK_DEFAULTS = {"speech": 0.3, "audience": 0.7, "duel": 0.8}
 
 
@@ -77,9 +86,27 @@ def _load_kinds() -> Dict[str, ChallengeKind]:
     return kinds
 
 
-CHALLENGE_KINDS: Dict[str, ChallengeKind] = _load_kinds()
-for _a in PERSUASION.get("attributes", {}):
-    require(_a in CHARACTER.attributes, "contests.json persuasion", f"unknown attribute '{_a}'")
+def use_rules(r: Dict[str, Any]):
+    """Put these contest rules in force (utils/game_data.py RuleSet does this for the game being played)."""
+    global _data, SKILL_WEIGHT, DEFENDER_CHOOSES
+    _data = r
+    SKILL_WEIGHT = r.get("skill_weight", 0.5)
+    game_data.fill(PERSUASION, r.get("persuasion", {}))
+    game_data.fill(CHALLENGE, r.get("challenge", {}))
+    game_data.fill(LUCK, r.get("luck", {}))
+    game_data.fill(CHALLENGE_KINDS, _load_kinds())
+    for a in PERSUASION.get("attributes", {}):
+        require(a in CHARACTER.attributes, "contests.json persuasion", f"unknown attribute '{a}'")
+    DEFENDER_CHOOSES = CHALLENGE.get("chosen_by", "challenger") == "defender"
+    game_data.fill(SPEAK, CHALLENGE.get("speak", {"life_hours": 0.25, "gain": 20, "practice": 0.04}))
+    game_data.fill(DURING_CONTEST, game_data.public(CHALLENGE.get("during_contest", {})))
+
+
+use_rules(BASE_RULES)
+# Every kind of challenge of any age: what an office's 'contested_by' may name.
+KNOWN_CHALLENGE_KINDS = {k for v in game_data.all_versions("contests", BASE_RULES)
+                         for k in v.get("challenge", {}).get("kinds", {})}
+game_data.switchable("contests", BASE_RULES, use_rules)
 
 
 def power(attributes: Dict[str, float], skills: Dict[str, float], weights: Dict[str, float],
@@ -93,11 +120,6 @@ def power(attributes: Dict[str, float], skills: Dict[str, float], weights: Dict[
 
 def persuasion_power(attributes, skills) -> float:
     return power(attributes, skills, PERSUASION.get("attributes", {"charisma": 1.0}), PERSUASION.get("skill"))
-
-
-DEFENDER_CHOOSES: bool = CHALLENGE.get("chosen_by", "challenger") == "defender"
-SPEAK: Dict[str, Any] = CHALLENGE.get("speak", {"life_hours": 0.25, "gain": 20, "practice": 0.04})
-DURING_CONTEST: Dict[str, Any] = {k: v for k, v in CHALLENGE.get("during_contest", {}).items() if not k.startswith("_")}
 
 
 def trade_skills(gov, player) -> List[str]:

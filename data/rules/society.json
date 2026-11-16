@@ -9,19 +9,9 @@
     "_comment": "How well one person does one job or office: their weighted attributes (share 'attribute_share') and skill (share 'skill_share'), scaled down when they are unwell ('condition': how much health and energy matter).",
     "attribute_share": 0.6,
     "skill_share": 0.4,
-    "condition": {
-      "health": 0.5,
-      "energy": 0.3
-    }
+    "condition": {"health": 0.5, "energy": 0.3}
   },
-  "office_quality_default": {
-    "attributes": {
-      "charisma": 1.0,
-      "wisdom": 1.0,
-      "intelligence": 0.5
-    },
-    "skill": "leadership"
-  },
+  "office_quality_default": {"attributes": {"charisma": 1.0, "wisdom": 1.0, "intelligence": 0.5}, "skill": "leadership"},
   "qualities": {
     "_comment": "Society-wide qualities. style 'supply': the work of 'sources' (occupations, or 'office:Name') against what the group needs ('per_person' x members); each worker gives 'amount' x their work quality / 50. 'variety': share of the score that depends on how many 'category' kinds are covered. style 'offices': the average quality of every office seat (vacant seats count as 0), weighted by the office's points. 'weight': importance in the overall society score. 'requires': innovations before it counts. A source's 'while_working': its workers count this many times over while they are doing their job's work right now (a Warrior out on patrol, the Spirit Keeper leading a ritual). Jobs and offices with work of their own (work.json) count only while worked lately. 'on_hand' (food): part of the value comes from what the tribe actually holds.",
     "food": {
@@ -36,20 +26,6 @@
         "need": "food",
         "share": 0.5,
         "per_member": 140
-      },
-      "sources": {
-        "Gatherer": {
-          "amount": 1.0,
-          "category": "plants"
-        },
-        "Hunter": {
-          "amount": 1.6,
-          "category": "meat"
-        },
-        "Fisher": {
-          "amount": 1.3,
-          "category": "fish"
-        }
       }
     },
     "water": {
@@ -63,35 +39,10 @@
         "need": "water",
         "share": 0.6,
         "per_member": 640
-      },
-      "sources": {
-        "Gatherer": {
-          "amount": 0.5
-        }
       }
     },
-    "leadership": {
-      "name": "Leadership",
-      "icon": "👑",
-      "weight": 3,
-      "style": "offices"
-    },
-    "safety": {
-      "name": "Safety",
-      "icon": "🐺",
-      "weight": 1.5,
-      "style": "supply",
-      "per_person": 0.2,
-      "sources": {
-        "Warrior": {
-          "amount": 1.0,
-          "while_working": 2.0
-        },
-        "Scout": {
-          "amount": 0.6
-        }
-      }
-    },
+    "leadership": {"name": "Leadership", "icon": "👑", "weight": 3, "style": "offices"},
+    "safety": {"name": "Safety", "icon": "🐺", "weight": 1.5, "style": "supply", "per_person": 0.2},
     "fire": {
       "name": "Fire",
       "icon": "🔥",
@@ -101,12 +52,7 @@
       "uses": ["care:warm_up"],
       "per_use": 2,
       "fall_per_day": 0,
-      "start": 50,
-      "sources": {
-        "Firekeeper": {
-          "amount": 1.0
-        }
-      }
+      "start": 50
     },
     "care": {
       "name": "Care",
@@ -114,15 +60,6 @@
       "weight": 1,
       "style": "supply",
       "per_person": 0.2,
-      "sources": {
-        "Healer": {
-          "amount": 1.0
-        },
-        "office:Spirit Keeper": {
-          "amount": 0.5,
-          "while_working": 2.0
-        }
-      },
       "sick": {
         "_comment": "'share' of the Care quality comes from how well the sick are seen to (data/life.json 'illnesses'): 100 less 'per_sick' for each person ill now who has nobody to see to them. Healing work worth 'cover_supply' (about one Healer at work) sees to them all. So Care can't read full while people lie sick with no Healer, and leaders see the need for one (and the cost of taking one away).",
         "share": 0.6,
@@ -134,51 +71,15 @@
         "death": -10
       }
     },
-    "tools": {
-      "name": "Tools",
-      "icon": "🪚",
-      "weight": 1,
-      "style": "supply",
-      "per_person": 0.2,
-      "requires": [
-        "Toolmaking"
-      ],
-      "sources": {
-        "Toolmaker": {
-          "amount": 1.0
-        }
-      }
-    },
-    "culture": {
-      "name": "Culture",
-      "icon": "📯",
-      "weight": 1,
-      "style": "supply",
-      "per_person": 0.2,
-      "sources": {
-        "Storyteller": {
-          "amount": 1.0
-        },
-        "office:Spirit Keeper": {
-          "amount": 0.8,
-          "while_working": 1.5
-        }
-      }
-    },
+    "tools": {"name": "Tools", "icon": "🪚", "weight": 1, "style": "supply", "per_person": 0.2, "requires": ["Toolmaking"]},
+    "culture": {"name": "Culture", "icon": "📯", "weight": 1, "style": "supply", "per_person": 0.2},
     "shelter": {
       "name": "Shelter",
       "icon": "🛖",
       "weight": 1,
       "style": "supply",
       "per_person": 0.25,
-      "requires": [
-        "Traditional Sites"
-      ],
-      "sources": {
-        "Builder": {
-          "amount": 1.0
-        }
-      }
+      "requires": ["Traditional Sites"]
     }
   },
   "satisfaction": {
@@ -192,16 +93,8 @@
     "no_work": 35,
     "input_values": {
       "_comment": "What the special inputs are worth (0-100). 'working': while the person is doing their own job's work right now (the W key: a task or recipe of their occupation or office), while they hold a job but are not working it, and while they have none. 'fire': while the fire burns and a Firekeeper has tended it lately (worked within work.json 'work_counts_life_hours'), while it burns untended, and while it is out.",
-      "working": {
-        "working": 100,
-        "idle_with_job": 20,
-        "idle_without_job": 5
-      },
-      "fire": {
-        "tended": 100,
-        "untended": 55,
-        "out": 0
-      }
+      "working": {"working": 100, "idle_with_job": 20, "idle_without_job": 5},
+      "fire": {"tended": 100, "untended": 55, "out": 0}
     },
     "positions": {
       "_comment": "'positions_filled' (an input and a multiplier): the share of the tribe's positions that are filled. Positions are every seat of every unlocked office ('office_seats') and every unlocked occupation ('occupations'; filled while anyone holds it, and not counted while nobody could take it up for want of a tool). 'cap_at_members': a tribe can't fill more positions than it has members, so the share is out of at most that many.",
@@ -216,98 +109,31 @@
       "food": {
         "name": "Food",
         "hardship": [{"source": "health", "below": 40, "fall_per_day_at_zero": 200, "cap_above": 40, "label": "Weak with hunger"}],
-        "inputs": {
-          "quality:food": 0.7,
-          "need:food": 0.3
-        },
-        "variety_rates": [
-          -60,
-          -3,
-          10,
-          20,
-          35
-        ],
-        "hunger": {
-          "need": "food",
-          "below": 40,
-          "fall_per_day_at_zero": 300,
-          "cap_above_need": 30
-        },
+        "inputs": {"quality:food": 0.7, "need:food": 0.3},
+        "variety_rates": [-60, -3, 10, 20, 35],
+        "hunger": {"need": "food", "below": 40, "fall_per_day_at_zero": 300, "cap_above_need": 30},
         "_comment": "'variety_rates': instead of drifting toward a target, this meter moves by this many points per day-night cycle, by how many kinds of food the person carries right now (0 kinds, 1, 2, 3, 4 or more): nothing to eat makes people unhappy fast, one kind barely holds them, a varied pack pleases them more and more. 'hunger': once their 'need' (food) is below 'below', the meter also falls by up to 'fall_per_day_at_zero' points per cycle (all of it when starving), and can't be more than 'cap_above_need' points above the need: a starving person is not content with food, however varied their pack."
       },
       "work": {
         "name": "Work",
         "hardship": [{"source": "health", "below": 50, "fall_per_day_at_zero": 300, "cap_above": 30, "label": "Too weak to work"}],
         "_comment": "Holding a job is worth very little by itself: the meter rises only while the person works their job (W), and sinks slowly toward 'idle_with_job' while they don't. How fast it rises: the right tools for the job (more than one, faster), how much choice of work the age offers, and how well they fit the job.",
-        "inputs": {
-          "working": 1.0
-        },
+        "inputs": {"working": 1.0},
         "expectations": false,
         "rise_per_day": 0.6,
         "fall_per_day": 0.5,
         "multipliers": {
-          "tools": {
-            "curve": [
-              [
-                0,
-                0.4
-              ],
-              [
-                1,
-                1.0
-              ],
-              [
-                2,
-                1.5
-              ],
-              [
-                3,
-                1.8
-              ]
-            ],
-            "none_invented": 1.0
-          },
-          "job_variety": {
-            "curve": [
-              [
-                0,
-                0.25
-              ],
-              [
-                0.5,
-                0.5
-              ],
-              [
-                0.75,
-                1.0
-              ],
-              [
-                1,
-                2.0
-              ]
-            ]
-          },
-          "fit": {
-            "curve": [
-              [
-                0,
-                0.6
-              ],
-              [
-                50,
-                1.0
-              ],
-              [
-                100,
-                1.4
-              ]
-            ]
-          }
+          "tools": {"curve": [[0, 0.4], [1, 1.0], [2, 1.5], [3, 1.8]], "none_invented": 1.0},
+          "job_variety": {"curve": [[0, 0.25], [0.5, 0.5], [0.75, 1.0], [1, 2.0]]},
+          "fit": {"curve": [[0, 0.6], [50, 1.0], [100, 1.4]]}
         }
       },
       "leaders": {
         "name": "Leaders",
-        "hardship": [{"source": "tribe_distress", "below": 90, "fall_per_day_at_zero": 350, "cap_above": 40}, {"source": "health", "below": 35, "fall_per_day_at_zero": 150}],
+        "hardship": [
+          {"source": "tribe_distress", "below": 90, "fall_per_day_at_zero": 350, "cap_above": 40},
+          {"source": "health", "below": 35, "fall_per_day_at_zero": 150}
+        ],
         "_comment": "How they feel about the leaders: how well the offices are run, and everything else in their life (when food, safety, comfort and the rest go up, it reflects on the leaders, and faster while most of them are rising). Someone a leader appointed to work they are poorly suited for warms to the leaders only slowly; being dismissed or moved hurts a lot ('job_loss').",
         "inputs": {
           "quality:leadership": 0.35,
@@ -317,129 +143,32 @@
           "meter:comfort": 0.15,
           "meter:society": 0.1
         },
-        "bonus": {
-          "holds_office": 15
-        },
+        "bonus": {"holds_office": 15},
         "multipliers": {
-          "meters_rising": {
-            "curve": [
-              [
-                0,
-                0.5
-              ],
-              [
-                0.5,
-                1.0
-              ],
-              [
-                1,
-                1.6
-              ]
-            ]
-          },
-          "fit": {
-            "curve": [
-              [
-                0,
-                0.15
-              ],
-              [
-                30,
-                0.4
-              ],
-              [
-                50,
-                1.0
-              ],
-              [
-                100,
-                1.2
-              ]
-            ],
-            "appointed_only": true
-          }
+          "meters_rising": {"curve": [[0, 0.5], [0.5, 1.0], [1, 1.6]]},
+          "fit": {"curve": [[0, 0.15], [30, 0.4], [50, 1.0], [100, 1.2]], "appointed_only": true}
         }
       },
       "society": {
         "name": "Society",
         "hardship": [{"source": "tribe_distress", "below": 90, "fall_per_day_at_zero": 300, "cap_above": 45}],
-        "inputs": {
-          "society": 1.0
-        }
+        "inputs": {"society": 1.0}
       },
       "comfort": {
         "name": "Comfort",
-        "hardship": [{"source": "need:warmth", "below": 45, "fall_per_day_at_zero": 400, "cap_above": 30, "label": "Freezing"}, {"source": "health", "below": 40, "fall_per_day_at_zero": 150, "cap_above": 40}],
+        "hardship": [
+          {"source": "need:warmth", "below": 45, "fall_per_day_at_zero": 400, "cap_above": 30, "label": "Freezing"},
+          {"source": "health", "below": 40, "fall_per_day_at_zero": 150, "cap_above": 40}
+        ],
         "_comment": "The tribe's Fire quality (raised only by people warming themselves at the fire, not by the fire merely burning), care from Healers and the Spirit Keeper, and shelter (once there are Builders). While the Spirit Keeper leads a ritual (their W work), everyone's comfort rises faster, and the tribe's care counts double (qualities 'while_working'). The input 'fire' (tended/untended/out, satisfaction.input_values) is still there for other meters.",
-        "inputs": {
-          "quality:fire": 0.45,
-          "quality:care": 0.35,
-          "quality:shelter": 0.2
-        },
-        "multipliers": {
-          "working_now:office:Spirit Keeper": {
-            "curve": [
-              [
-                0,
-                1.0
-              ],
-              [
-                1,
-                1.8
-              ]
-            ]
-          }
-        }
+        "inputs": {"quality:fire": 0.45, "quality:care": 0.35, "quality:shelter": 0.2},
+        "multipliers": {}
       },
       "safety": {
         "name": "Safety",
         "_comment": "Warriors (and Scouts) watching over the camp, and every position in the tribe being filled. Each Warrior out on patrol right now makes it rise faster (and counts double toward the tribe's safety); while positions stand empty it rises slowly, or not at all.",
-        "inputs": {
-          "quality:safety": 0.55,
-          "positions_filled": 0.45
-        },
-        "multipliers": {
-          "working_now:Warrior": {
-            "curve": [
-              [
-                0,
-                1.0
-              ],
-              [
-                1,
-                1.5
-              ],
-              [
-                2,
-                1.9
-              ],
-              [
-                4,
-                2.5
-              ]
-            ]
-          },
-          "positions_filled": {
-            "curve": [
-              [
-                0.5,
-                0.0
-              ],
-              [
-                0.75,
-                0.35
-              ],
-              [
-                0.9,
-                0.7
-              ],
-              [
-                1,
-                1.0
-              ]
-            ]
-          }
-        }
+        "inputs": {"quality:safety": 0.55, "positions_filled": 0.45},
+        "multipliers": {"positions_filled": {"curve": [[0.5, 0.0], [0.75, 0.35], [0.9, 0.7], [1, 1.0]]}}
       }
     },
     "expectations": {
@@ -449,34 +178,14 @@
     },
     "job_loss": {
       "_comment": "What being dismissed from work costs. Anyone can be dismissed or moved to other work at any time, as often as the appointer likes, but people resent it. 'dismissed': taken off their work; 'reassigned': moved straight from one job to another by appointment. 'hit': points their meters drop at once. 'grievance': points their meters' targets stay lowered by, fading by half every 'grievance_half_life_life_hours' (of the day-night cycle); repeated dismissals add up, to at most 'max_grievance' per meter. 'onlookers': what everyone else feels each time (a leader who keeps dismissing people unsettles the whole tribe); a kind may set its own 'onlookers'. Unhappy people are restless: NPCs challenge or vote out leaders whose 'leaders' meter is low (npc.json 'discontent'), once their patience runs out ('patience').",
-      "dismissed": {
-        "hit": {
-          "work": 30,
-          "leaders": 25
-        },
-        "grievance": {
-          "work": 25,
-          "leaders": 20
-        }
-      },
+      "dismissed": {"hit": {"work": 30, "leaders": 25}, "grievance": {"work": 25, "leaders": 20}},
       "reassigned": {
         "_comment": "Moving people between jobs is a normal part of leading (a food shortage, a new Toolmaker...): it costs a little Work contentment (leaving work they had got into), and onlookers don't mind it ('onlookers' here replaces the shared one). How they feel about the leaders depends on whether the new work is higher or lower ('job_rank').",
-        "hit": {
-          "work": 5
-        },
-        "grievance": {
-          "work": 3
-        },
+        "hit": {"work": 1},
+        "grievance": {"work": 3},
         "onlookers": {}
       },
-      "onlookers": {
-        "hit": {
-          "leaders": 3
-        },
-        "grievance": {
-          "leaders": 2
-        }
-      },
+      "onlookers": {"hit": {"leaders": 3}, "grievance": {"leaders": 2}},
       "grievance_half_life_life_hours": 24,
       "max_grievance": 60
     },

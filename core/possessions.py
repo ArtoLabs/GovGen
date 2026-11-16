@@ -278,16 +278,20 @@ class Possessions:
         return next((c.restores[need] for c in RULES.care_actions.values() if c.consumes and need in c.restores), 70)
 
     def _own_work_uses(self, player) -> Dict[str, set]:
-        """Items the player's own work uses: {'tools': ..., 'materials': ...}."""
+        """Items the player's own work uses: {'tools': ..., 'materials': ...}. Materials only for their own
+        job's work (a Fire Tender's wood, a Toolmaker's stone): work open to anyone draws on the store."""
         from core import work as WORK
         gov = self.engine.government
         occupations, offices = gov.occupations_of(player), gov.offices_of(player)
         tools, materials = set(), set()
         for t in [*WORK.TASKS.values(), *WORK.RECIPES.values()]:
-            if not t.open_to_anyone and WORK.job_for(t, occupations, offices) is None:
+            own = WORK.job_for(t, occupations, offices) is not None
+            if not own and not t.open_to_anyone:
                 continue
             tools.update(self.tool_options(t.tools))
             tools.update(t.boost)
+            if not own:
+                continue  # work anyone may do (laying the dead to rest...) takes its wood from the store
             for stacks in t.tool_consumes.values():
                 materials.update(k for s in stacks for k in substitutes(s["item"]))
             materials.update(s["item"] for s in t.consumes)
@@ -339,7 +343,7 @@ class Possessions:
             portion = self._portion(need)
             if self._points(player, need) >= KEEPING.get("restock_below_meals", 1) * portion:
                 continue
-            short = KEEPING.get(key, 3) * portion - self._points(player, need)
+            short = KEEPING.get("restock_" + key, KEEPING.get(key, 3)) * portion - self._points(player, need)
             plan: Dict[str, int] = {}
             kinds = [k for k in restoring(need) if self.ground.get(k, 0)]
             while kinds and short > 0:
@@ -354,6 +358,30 @@ class Possessions:
             for k, n in plan.items():
                 took |= self._pick_up(player, {"item": k, "count": n}, f"is running out of {need}")
         return took
+
+    def put_back(self, player) -> bool:
+        """An NPC puts materials into the camp store that their own job doesn't use up (wood and stone are
+        for the Fire Tender and the Toolmaker), and own-job materials beyond 'own_materials'. Food, water,
+        medicine and tools stay. Returns True if they put anything back."""
+        from core import work as WORK
+        materials = {s["item"] for t in [*WORK.TASKS.values(), *WORK.RECIPES.values()] for s in t.consumes} | \
+                    {k for t in [*WORK.TASKS.values(), *WORK.RECIPES.values()]
+                     for stacks in t.tool_consumes.values() for s in stacks for k in substitutes(s["item"])}
+        mine = self._own_work_uses(player)
+        done = False
+        for item, have in player.inventory.totals().items():
+            info = ITEMS[item]
+            if item not in materials or info.uses or item in mine["tools"] or \
+                    any(info.use.get(n, 0) > 0 for n in ("food", "water", "health")):
+                continue
+            spare = have - (int(KEEPING.get("own_materials", 6)) if item in mine["materials"] else 0)
+            if spare > 0:
+                player.inventory.take(item, spare)
+                pile_add(self.ground, item, spare)
+                done = True
+                Messages.add(f"{player.name} puts {describe([{'item': item, 'count': spare}])} in the camp store",
+                             important=False, category="life", reason="their work doesn't use it")
+        return done
 
     @staticmethod
     def tool_options(options: List[str]) -> List[str]:
@@ -400,7 +428,7 @@ class Possessions:
                 if any(p.inventory.count(k) for k in self.tool_options(t.tools)):
                     continue  # took one for another task of the same job just now
                 stored = [k for k in self.tool_options(t.tools) if self.ground.get(k, 0) and p.inventory.room_for(k)]
-                key = next((k for k in stored if self.has_all(p, e._tool_consumes(t, k))), stored[0] if stored else None)
+                key = next((k for k in stored if self.has_all(p, e.production._tool_consumes(t, k))), stored[0] if stored else None)
                 if key:
                     name = job[7:] if job.startswith("office:") else job
                     self._pick_up(p, {"item": key, "count": 1}, f"needs it for their work as {name}")

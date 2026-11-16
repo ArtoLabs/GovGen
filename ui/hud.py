@@ -37,7 +37,7 @@ from core.calendar import format_date, format_duration
 from world.environment import HOURS_PER_LIFE_HOUR, format_life_duration
 from world.character import RULES as CHARACTER
 from innovations.innovation import INTERFACE_ICONS
-from ui.model import (camp_line, occupation_icons, contest_focus, BallotWatcher, ballot_status, ACTION_SECTIONS, INTERFACES, Menu,
+from ui.model import (camp_line, term, use_terms, occupation_icons, meter_contests, BallotWatcher, ballot_status, ACTION_SECTIONS, INTERFACES, Menu,
                       life_icons, life_status,
                       MenuItem, action_groups, build_menu, innovation_catalog, current_age_innovations, positions_of,
                       CRAFT_FILTERS, craft_catalog, craft_detail, protected_note)
@@ -389,7 +389,7 @@ def profile_text(pr: Dict[str, Any], key: str = "", ranked: Optional[int] = None
     t.append(f"{pr['name']:<8}", style="bold green" if pr["you"] else "bold")
     t.append(f" {pr['age']} {pr['life_stage'].lower()}", style="dim")
     t.append("  ·  ")
-    t.append(pr["positions"] or "Tribe member", style="cyan")
+    t.append(pr["positions"] or term("member"), style="cyan")
     if pr["occupations"]:
         t.append(f"  ·  {pr['occupation_icons']} {', '.join(pr['occupations'])}", style="cyan")
     if pr["you"]:
@@ -602,7 +602,7 @@ class HelpScreen(InfoScreen):
                  "for the Gatherers instead. Unused places are lost after a while. The W "
                  "menu says when a good place is known. Fetching water from the river always works.\n\n")
         t.append("Life and death\n", style="bold")
-        t.append("People are born, grow up, fall ill and die (data/life.json). Anyone may fall ill, the old far more "
+        t.append("People are born, grow up, fall ill and die (data/rules/life.json). Anyone may fall ill, the old far more "
                  "often, and hard work makes it likelier. While ill (🤒 in your box) your health drains; at nothing "
                  "you die. Only a healer can cure it: press E, See the healer. The Healer (Herbalism) needs herbs (or "
                  "poultices) in their own pack; each visit uses one, may cure you (less likely the older you are) and "
@@ -705,7 +705,7 @@ class MemberCard(Vertical):
         elif icons and not life.get("illness"):
             head.append(f"  {icons}", style="")
         head.append("  ·  ")
-        head.append(positions_of(p) or "Tribe member", style="bold cyan")
+        head.append(positions_of(p) or term("member"), style="bold cyan")
         if p["occupations"]:
             head.append(f"  ·  {occupation_icons(view, p)} {', '.join(p['occupations'])}", style="cyan")
         if p.get("work_quality") is not None:
@@ -789,8 +789,8 @@ class TribeScreen(InfoScreen):
     @staticmethod
     def _head(view: Dict[str, Any]) -> Text:
         t = Text()
-        t.append("Tribe", style="bold cyan")
-        t.append(f"   {len(view['players'])} members", style="dim")
+        t.append(term("members"), style="bold cyan")
+        t.append(f"   {len(view['players'])} people", style="dim")
         moods = [p.get("mood", 50) for p in view["players"]]
         if moods:
             avg = sum(moods) / len(moods)
@@ -894,7 +894,7 @@ class CharacterScreen(InfoScreen):
         me = next(p for p in v["players"] if p["name"] == v["you"])
         t = Text()
         t.append(f"{v['you']}", style="bold cyan")
-        t.append(f"  age {c['age']} ({c['life_stage']})  ·  {', '.join(v['your_positions']) or 'Tribe member'}")
+        t.append(f"  age {c['age']} ({c['life_stage']})  ·  {', '.join(v['your_positions']) or term('member')}")
         if v["your_occupations"]:
             t.append(f"  ·  {occupation_icons(v, me)} {', '.join(v['your_occupations'])}", style="cyan")
         t.append(f"\n{me['description']}  ", style="italic")
@@ -1343,7 +1343,7 @@ class CommandCenter(Screen):
         self.query_one("#ballots").border_title = "Government and votes"
         self.query_one("#innovations").border_title = "Innovation pool"
         self.query_one("#innovations").border_subtitle = "click an icon, or F4"
-        self.query_one("#tribe").border_title = "Tribe"
+        self.query_one("#tribe").border_title = term("members")
         self.query_one("#places").border_title = "Found places"
         self.query_one("#fkeys", Static).update(
             "[@click=screen.info('help')][b green]F1[/] help[/]  [@click=screen.info('tribe')][b green]F2[/] tribe[/]  "
@@ -1363,6 +1363,8 @@ class CommandCenter(Screen):
     # ------------------------------------------------------------------ #
     def draw(self, view: Dict[str, Any], legal: list):
         hud = self.hud
+        use_terms(view)
+        self.query_one("#tribe").border_title = term("members")  # 'Tribe' now; another age or government may differ
         gov = view["government"]
         pacer = hud.pacer
         speed = "[b red]❚❚ PAUSED[/]" if pacer.paused else f"▶ {pacer.describe()}"
@@ -1379,10 +1381,11 @@ class CommandCenter(Screen):
 
     @staticmethod
     def _camp(view) -> str:
-        """What the camp store holds (items.json 'camp_summary'): plain counts, as in the inventory window."""
+        """What the shared store holds (the age's 'store_panel' in age.json): plain counts, as in the
+        inventory window. The label in front is the age's word for the place ('Camp', later 'City'...)."""
         parts = [f"{g['icon']} [b{' red' if g['empty_warning'] and not g['count'] else ''}]{g['count']}[/]"
                  for g in camp_line(view)]
-        return "[dim]camp[/] " + "   ".join(parts) if parts else ""
+        return f"[dim]{term('store').lower()}[/] " + "   ".join(parts) if parts else ""
 
     @staticmethod
     def _sky(w) -> str:
@@ -1417,7 +1420,7 @@ class CommandCenter(Screen):
                         f"[dim]{format_life_duration(side['hours_left'])} left · on the side[/]")
         elif side and side.get("can_talk"):
             head.append("[b black on green] P [/] [green]ready to talk again[/] [dim](while you work)[/]")
-        for kind, headline, detail in life_status(life):  # ill, with child, a child (data/life.json)
+        for kind, headline, detail in life_status(life):  # ill, with child, a child (data/rules/life.json)
             if kind == "illness":
                 head.append(f"[b white on red] {escape(headline)} [/] [red]{escape(detail)}[/]")
             elif kind == "pregnancy":
@@ -1461,7 +1464,7 @@ class CommandCenter(Screen):
             t.append(", " if i else "")
             t.append(pos, style="bold red" if pos in me["statuses"] and pos not in me["offices"] else "bold cyan")
         if not t.plain:
-            t.append("Tribe member", style="bold cyan")
+            t.append(term("member"), style="bold cyan")
         if me["occupations"]:
             t.append("  ·  ", style="dim")
             t.append(f"{occupation_icons(v, me)} {', '.join(me['occupations'])}", style="cyan")
@@ -1518,6 +1521,8 @@ class CommandCenter(Screen):
 
         # Contests come first (yours at the top): they move fast and can cost you your office.
         needs_you = self._draw_contests(t, v)
+        head, t = t, Text()
+        meters = self._contest_meters(v)
         alerts = self.hud.alerts[-4 if v.get("contests") else -5:]
         if alerts:
             t.append("─" * 46 + "\n", style="dim")
@@ -1560,7 +1565,9 @@ class CommandCenter(Screen):
                 hint = ("Busy now: you can vote when you are free." if tag == "VOTE WHEN FREE"
                         else f"Press {key} to {'nominate' if key == 'N' else 'vote'}.")
                 t.append(f"   {hint}\n", style=ALERT_STYLE[level])
-        self.query_one("#ballots_body", Static).update(t)
+        from rich.console import Group
+        parts = [head] + ([Text(""), meters] if meters else []) + [t]
+        self.query_one("#ballots_body", Static).update(Group(*parts))
         self.query_one("#ballots").set_class(needs_you, "attention")
 
     def _draw_contests(self, t: Text, v) -> bool:
@@ -1618,14 +1625,33 @@ class CommandCenter(Screen):
                 t.append("   You are in this contest.\n", style="bold red" if role == "defender" else "bold green")
         return needs_you
 
+    def _contest_meters(self, v):
+        """Each running campaign or oration as a column: how far every listener is won over.
+        Columns sit side by side when the panel is wide enough, else stack (the panel scrolls)."""
+        from rich.columns import Columns
+        cols = []
+        for c in meter_contests(v):
+            col = Text(no_wrap=True, overflow="ellipsis")
+            what = "persuaded by" if c["style"] == "persuasion" else "for"
+            col.append(f"{c['icon']} {what} {c['challenger']}\n", style="bold")
+            col.append(f"   ({c['office']})\n", style="dim")
+            for p in v["players"]:
+                name = p["name"]
+                m = c["meters"].get(name)
+                if m is None and name not in (c["challenger"], c["defender"]):
+                    continue
+                col.append(f"{name:<8}", style="bold green" if name == v["you"] else "bold")
+                if m is None:
+                    col.append("campaigning\n" if name == c["challenger"] else "defending\n", style="cyan")
+                else:
+                    col.append(f"{bar(m, 100, 8)} {m:3.0f}%\n", style="green" if m >= 50 else "yellow")
+            cols.append(col)
+        return Columns(cols, width=22, padding=(0, 2)) if cols else None
+
     def _draw_tribe(self, v):
         # One line per member, cut to the panel's width with '…' (never wrapped: a wrapped line pushed the
         # rest of the row out of sight); the legend below wraps as usual.
         t = Text(no_wrap=True, overflow="ellipsis")
-        focus = contest_focus(v)
-        if focus:
-            what = "persuaded by" if focus["style"] == "persuasion" else "for"
-            t.append(f"Meters: how far each is {what} {focus['challenger']}\n", style="bold")
         for p in v["players"]:
             you = p["name"] == v["you"]
             t.append("●", style=sat_style(p.get("mood", 50)))
@@ -1642,12 +1668,7 @@ class CommandCenter(Screen):
                 t.append(body, style="")
             child = (p.get("life") or {}).get("child") or not (p.get("life") or {}).get("of_age", True)
             t.append("✗" if not p["can_vote"] and not child else " ", style="red")
-            meter = focus["meters"].get(p["name"]) if focus else None
-            if meter is not None:
-                t.append(f" {bar(meter, 100, 6)} {meter:3.0f}%\n", style="green" if meter >= 50 else "yellow")
-            elif focus and p["name"] in (focus["challenger"], focus["defender"]):
-                t.append(f" {'campaigning' if p['name'] == focus['challenger'] else 'defending'}\n", style="bold")
-            elif p["doing"] and not p["doing"].startswith("resting"):
+            if p["doing"] and not p["doing"].startswith("resting"):
                 t.append(f" {p['doing']}\n", style="yellow")
             elif not p["doing"] and p.get("waiting_for"):
                 t.append(f" needs {p['waiting_for'][2:]}\n", style="yellow")
@@ -1725,7 +1746,7 @@ class CommandCenter(Screen):
             text, style = getattr(self, "_status", ("", ""))
         self._status = (text, style)
         v = self.hud.last_view
-        who = f"{v['you']} ({', '.join(v['your_positions']) or 'Tribe member'})" if v else ""
+        who = f"{v['you']} ({', '.join(v['your_positions']) or term('member')})" if v else ""
         t = Text(f" {who} ▸ ", style="bold")
         t.append(text, style=style)
         self.query_one("#status", Static).update(t)
@@ -1973,6 +1994,7 @@ class GovGenHUD(App):
         if version != self.version and view is not None:
             first = self.last_view is None
             self.version, self.last_view, self.last_legal = version, view, legal
+            use_terms(view)  # what this age and government call things (Tribe, Camp...)
             self._watch_ballots(view, legal)
             main.draw(view, legal)
             if hasattr(self.screen, "refresh_view"):

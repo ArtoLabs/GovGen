@@ -21,7 +21,7 @@ speed a game year takes about five real minutes. Change speed in game (F5) or wi
 (`max` = no waiting). Members of the tribe act only now and then (they spend
 weeks at a time going about their lives) but come back within a few days when an election or vote
 opens that they can take part in. Progress is slow on purpose: reaching the Stone Age takes decades
-(tune `innovation_cost_multiplier` in `data/time.json`).
+(each innovation's `cost` is in its age's folder, `data/ages/<age>/innovations.json`).
 
 **New characters.** Every new game starts everyone's attributes at 5 (average) and rolls dice for a bonus on top (5–9; only illness, age and the like later take one below 5); skills start at 0 except
 those of jobs open from the start (gathering, firekeeping). Children get only the part of the roll their
@@ -219,7 +219,12 @@ first). The top bar shows AUTO or MANUAL, and the choice is saved with the game.
 **Saving.** There is one save, `saves/savegame.json`. The game autosaves at the start of every season
 and when you exit (F10 or Ctrl+Q on the HUD; "Save and exit" or Ctrl+C in classic mode). Watch mode never touches it.
 
-Settings live in `data/settings.json`; the calendar and action durations in `data/time.json`.
+Settings live in `data/settings.json`; the calendar and action durations in `data/rules/time.json`.
+
+**Data by age.** Each age has its own folder, `data/ages/<age>/`, with its innovations (and their costs),
+items, occupations (one file each, with all of the occupation's work), governments and what the age calls
+things; `data/rules/` holds how things work in every age. Adding an age is adding a folder. See
+`data/README.md`.
 
 ## How it fits together
 

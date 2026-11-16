@@ -1,0 +1,20 @@
+{
+  "name": "Sustenance Gardener",
+  "icon": "🌱",
+  "appointed_by": ["Clan Leader", "Chieftain", "Steward", "Elder", "Spirit Keeper"],
+  "volunteer": true,
+  "attributes": ["wisdom", "constitution"],
+  "skill": "gathering",
+  "requires": ["Sustenance Gardening"],
+  "description": "Plants and tends forest gardens: makes places where Gatherers are sure to find berries, roots and herbs (they don't gather it themselves).",
+  "tasks": {
+    "tend_garden": {
+      "label": "Tend a forest garden",
+      "life_hours": 2,
+      "skill": "gathering",
+      "requires": ["Sustenance Gardening"],
+      "makes_sites": {"kinds": {"plants": 3, "herbs": 1}, "life_hours": 6, "loads": 1.5},
+      "_comment": "The Sustenance Gardener plants and tends plots: each time a place of plants (or herbs) the Gatherers (or Healers) can go to for a sure harvest, for 'life_hours'. They don't gather it themselves."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Builder",
+  "icon": "🛖",
+  "appointed_by": ["Clan Leader", "Steward", "Chieftain", "Elder", "Spirit Keeper"],
+  "attributes": ["strength", "intelligence"],
+  "skill": "building",
+  "points": 1,
+  "requires": ["Traditional Sites"],
+  "description": "Raises shelters, windbreaks and storage pits.",
+  "contributes": {"shelter": {"amount": 1.0}},
+  "tasks": {
+    "build": {
+      "label": "Raise shelters",
+      "life_hours": 3,
+      "skill": "building",
+      "consumes": [{"item": "wood", "count": 4}, {"item": "hide", "count": 1}]
+    }
+  }
+}

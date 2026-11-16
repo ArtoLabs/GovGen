@@ -1,0 +1,4 @@
+{
+  "_comment": "This age's changes to data/rules/life.json: any value given here replaces the one there from the moment the age is reached (later ages lay theirs on top). 'treatment.healers': the occupations that can heal the sick.",
+  "treatment": {"healers": ["Healer"]}
+}

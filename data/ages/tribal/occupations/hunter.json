@@ -1,0 +1,32 @@
+{
+  "name": "Hunter",
+  "icon": "🦌",
+  "appointed_by": ["Clan Leader", "Chieftain", "Sacred Chief", "Steward", "Elder", "Spirit Keeper"],
+  "attributes": ["strength", "dexterity"],
+  "skill": "hunting",
+  "points": 1,
+  "requires": ["Hunting"],
+  "description": "Goes out to hunt with a spear or bow and brings back meat, hides and bone.",
+  "also_trains": {"scouting": 0.2},
+  "needs_tools": ["wooden_spear", "flint_spear", "bow"],
+  "contributes": {"food": {"amount": 1.6, "category": "meat"}},
+  "tasks": {
+    "hunt": {
+      "label": "Go hunting",
+      "life_hours": 3,
+      "skill": "hunting",
+      "requires": ["Hunting"],
+      "tools": ["bow", "flint_spear", "wooden_spear"],
+      "tool_yields": {"bow": 1.4, "flint_spear": 1.2, "wooden_spear": 1.0, "flint_arrows": 1.15},
+      "tool_consumes": {"bow": [{"item": "arrows", "count": 1}]},
+      "yields": [
+        {"item": "meat", "amount": 13},
+        {"item": "hide", "amount": 2, "chance": 0.9},
+        {"item": "bone", "amount": 4, "chance": 0.9}
+      ],
+      "boost": {"stone_knife": 1.25, "wooden_knife": 1.1},
+      "site": "game",
+      "chance": 0.25
+    }
+  }
+}

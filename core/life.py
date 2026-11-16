@@ -1,4 +1,4 @@
-"""Life and death (data/life.json): how old people get, illness and healing, death and the dead,
+"""Life and death (data/rules/life.json): how old people get, illness and healing, death and the dead,
 pregnancy and birth, and childhood.
 
 The rules come in layers: life.json 'base', then the overrides of every age reached, of the current
@@ -18,12 +18,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from core.calendar import DAYS_PER_YEAR, HOURS_PER_DAY, HOURS_PER_YEAR, day_of_year, format_date
 from core.occupations import OCCUPATIONS
 from innovations.innovation import ALL_INNOVATIONS, AGES, AGES_BY_KEY
-from utils.data_files import DATA_DIR, load_json, require
+from utils import game_data
+from utils.data_files import require
 from utils.messages import Messages
 from world.character import RULES as CHARACTER
 from world.items import ITEMS
 
-_data = load_json(DATA_DIR / "life.json")
+_data = game_data.rules("life")
 
 
 def _public(d: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,12 +103,16 @@ def _check(r: Dict[str, Any], where: str):
 
 
 BASE: Dict[str, Any] = _data.get("base", {})
+# An age's changes: data/ages/<age>/rules/life.json (and, as before, life.json 'ages'). A government's: its
+# file's "rules": {"life": {...}} (read when the governments load), and life.json 'governments'.
 AGE_OVERRIDES: Dict[str, Dict[str, Any]] = _public(_data.get("ages", {}))
+for _k, _o in game_data.age_rules("life").items():
+    AGE_OVERRIDES[_k] = merge(copy.deepcopy(AGE_OVERRIDES.get(_k, {})), _o)
 GOVERNMENT_OVERRIDES: Dict[str, Dict[str, Any]] = _public(_data.get("governments", {}))
 INNOVATION_OVERRIDES: Dict[str, Dict[str, Any]] = _public(_data.get("innovations", {}))
 _check(BASE, "life.json base")
 for _k, _o in AGE_OVERRIDES.items():
-    require(_k in AGES_BY_KEY, "life.json ages", f"unknown age '{_k}' (ages.json)")
+    require(_k in AGES_BY_KEY, "life.json ages", f"unknown age '{_k}' (age.json)")
     _check(merge(copy.deepcopy(BASE), _o), f"life.json ages.{_k}")
 for _k, _o in INNOVATION_OVERRIDES.items():
     require(_k in ALL_INNOVATIONS, "life.json innovations", f"unknown innovation '{_k}'")
@@ -123,6 +128,7 @@ def rules_for(age_keys: List[str], government_key: Optional[str], discovered) ->
         merge(r, AGE_OVERRIDES.get(key, {}))
     if government_key:
         merge(r, GOVERNMENT_OVERRIDES.get(government_key, {}))
+        merge(r, game_data.GOVERNMENT_RULES.get(government_key, {}).get("life", {}))
     for name, over in INNOVATION_OVERRIDES.items():
         if name in discovered:
             merge(r, over)
@@ -363,7 +369,7 @@ class Life:
             patient.illness = None
         # Treating someone is the healer's work: their job counts as worked, and they learn from it.
         from core import work as WORK
-        self.engine.last_worked[healer.name] = self.clock
+        self.engine.production.last_worked[healer.name] = self.clock
         skill = OCCUPATIONS[opt["occupation"]].skill
         if skill:
             healer.train(skill, CHARACTER.training_per_year / DAYS_PER_YEAR * WORK.PRACTICE_DAYS_PER_TASK)

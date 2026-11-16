@@ -1,0 +1,22 @@
+{
+  "name": "Scout",
+  "icon": "🐾",
+  "appointed_by": ["Clan Leader", "War Leader", "Chieftain", "Commander", "General", "Elder", "Spirit Keeper"],
+  "attributes": ["dexterity", "wisdom"],
+  "skill": "scouting",
+  "points": 1,
+  "interfaces": ["intelligence"],
+  "description": "Ranges ahead to find game, water, danger and other groups.",
+  "also_trains": {"hunting": 0.3},
+  "requires": ["Tracking"],
+  "contributes": {"safety": {"amount": 0.6}},
+  "tasks": {
+    "scout": {
+      "label": "Scout for {name}",
+      "life_hours": 3,
+      "skill": "scouting",
+      "finds_sites": true,
+      "_comment": "Becomes one task per site kind (scout_plants, scout_game...): the Scout chooses what to look for. Brings nothing back: finds a place (see 'sites')."
+    }
+  }
+}

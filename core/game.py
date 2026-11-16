@@ -164,13 +164,14 @@ class Game:
 
     def _restock(self) -> bool:
         """NPCs running out of food or water take some from the camp store into their packs (items.json
-        'keeping'); you do that yourself in your inventory window."""
+        'keeping'), and put back materials their work doesn't use; you do that yourself in your inventory window."""
         engine, took = self.engine, False
         for name, controller in self.controllers.items():
             p = engine.player(name)
             if controller.is_human or not engine.possessions.hands_free(p):
                 continue
             took |= engine.possessions.restock(p)
+            took |= engine.possessions.put_back(p)
         if took:
             self._broadcast()
         return took

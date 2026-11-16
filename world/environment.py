@@ -1,13 +1,15 @@
 """The natural world around the tribe: the day-night cycle and the weather.
 
 The calendar (core/calendar.py) runs fast so that ages pass in a playable time. People live on a
-slower clock: one day-night cycle lasts `day_night_cycle_days` calendar days (data/time.json), about
+slower clock: one day-night cycle lasts `day_night_cycle_days` calendar days (data/rules/time.json), about
 15 real minutes at normal speed. Needs, sleep and the cold of night follow this cycle.
 """
 import math
 from typing import Any, Dict
 
 from core.calendar import HOURS_PER_DAY, season_of, _data as _time
+from utils import game_data
+from utils.game_data import RULES_DIR
 from utils.data_files import DATA_DIR, load_json, require
 
 CYCLE_DAYS: float = _time.get("day_night_cycle_days", 1080)
@@ -17,12 +19,28 @@ DUSK: float = _time.get("dusk", 0.75)
 require(0 < DAWN < DUSK < 1, "time.json", "'dawn' and 'dusk' must satisfy 0 < dawn < dusk < 1")
 START: float = DAWN + float(_time.get("start_after_dawn", 0.02))  # the game begins just after dawn
 
-_world = load_json(DATA_DIR / "world.json") if (DATA_DIR / "world.json").exists() else {}
-CLIMATE: Dict[str, Any] = _world.get("climate", {})
-SEASON_TEMPS: Dict[str, float] = CLIMATE.get("seasons", {})
-SWING: float = CLIMATE.get("day_night_swing", 0)
-COMFORT: float = CLIMATE.get("comfort", 18)
-FIRE: Dict[str, Any] = _world.get("fire", {})
+# data/rules/world.json as it is in every age; an age or a government may change any of it (the climate, how
+# warm a fire is), and use_rules() refills these in place.
+BASE_RULES: Dict[str, Any] = load_json(RULES_DIR / "world.json")
+CLIMATE: Dict[str, Any] = {}
+SEASON_TEMPS: Dict[str, float] = {}
+FIRE: Dict[str, Any] = {}
+SWING: float = 0
+COMFORT: float = 18
+
+
+def use_rules(r: Dict[str, Any]):
+    """Put these world rules in force (utils/game_data.py RuleSet does this for the game being played)."""
+    global SWING, COMFORT
+    game_data.fill(CLIMATE, r.get("climate", {}))
+    game_data.fill(SEASON_TEMPS, CLIMATE.get("seasons", {}))
+    game_data.fill(FIRE, r.get("fire", {}))
+    SWING = CLIMATE.get("day_night_swing", 0)
+    COMFORT = CLIMATE.get("comfort", 18)
+
+
+use_rules(BASE_RULES)
+game_data.switchable("world", BASE_RULES, use_rules)
 HOURS_PER_LIFE_HOUR: float = CYCLE_HOURS / 24  # calendar hours in one hour of the day-night cycle
 
 

@@ -8,6 +8,7 @@ from core.calendar import HOURS_PER_DAY
 from core import society
 from tests.helpers import advance_days, become_actor, find, new_engine
 from world.environment import life_hours_to_calendar
+from world.items import ITEMS
 
 
 class WorkTest(unittest.TestCase):
@@ -47,7 +48,7 @@ class WorkTest(unittest.TestCase):
         self.assertTrue(self.e.apply(bob, find(self.e, bob, "take_occupation", occupation="Gatherer")))
         bob = self.actor("Bob")
         before = self.store.get("berries", 0)
-        self.e._add_site("plants", "Esi", 10, 10 ** 4)  # a found place: certain
+        self.e.production._add_site("plants", "Esi", 10, 10 ** 4)  # a found place: certain
         random.seed(3)
         self.assertTrue(self.e.apply(bob, find(self.e, bob, "work", task="forage")))
         self.assertEqual(self.store.get("berries", 0), before)  # nothing until the work is done
@@ -137,7 +138,7 @@ class WorkTest(unittest.TestCase):
     def test_tending_the_fire_burns_wood_and_keeps_it_lit(self):
         kalani = self.e.player("Kalani")
         self.gov.occupations["Firekeeper"].append(kalani)
-        self.e.fire_until = self.e.clock + 10
+        self.e.production.fire_until = self.e.clock + 10
         kalani = self.actor("Kalani")
         wood = self.store["wood"]
         self.assertTrue(self.e.apply(kalani, find(self.e, kalani, "work", task="tend_fire")))
@@ -157,11 +158,11 @@ class WorkTest(unittest.TestCase):
     def test_camp_state_survives_a_save(self):
         from core.engine import GameEngine
         import json
-        self.e.last_worked["Bob"] = 1234
-        self.e.fire_until = 999
+        self.e.production.last_worked["Bob"] = 1234
+        self.e.production.fire_until = 999
         loaded = GameEngine.from_dict(json.loads(json.dumps(self.e.to_dict())))
-        self.assertEqual(loaded.last_worked["Bob"], 1234)
-        self.assertEqual(loaded.fire_until, 999)
+        self.assertEqual(loaded.production.last_worked["Bob"], 1234)
+        self.assertEqual(loaded.production.fire_until, 999)
 
 
 if __name__ == "__main__":
@@ -203,6 +204,32 @@ class KeepingTest(unittest.TestCase):
         bob = self.e.player("Bob")
         self.e.possessions.bring_back(bob, [{"item": "stone", "count": 4}])
         self.assertEqual(self.store.get("stone"), 4)
+
+    def test_only_those_whose_job_burns_or_shapes_it_keep_wood_and_stone(self):
+        from tests.helpers import give_work
+        bob = self.e.player("Bob")
+        self.e.possessions.bring_back(bob, [{"item": "wood", "count": 4}])
+        self.assertEqual(bob.inventory.count("wood"), 0)  # laying the dead to rest takes wood from the store
+        keeper = give_work(self.e, "Bob", "Firekeeper")
+        self.e.possessions.bring_back(keeper, [{"item": "wood", "count": 4}])
+        self.assertEqual(keeper.inventory.count("wood"), 4)
+
+    def test_npcs_put_back_materials_their_work_does_not_use(self):
+        bob = self.e.player("Bob")
+        bob.inventory.add("wood", 5)
+        bob.inventory.add("stone", 3)
+        self.assertTrue(self.e.possessions.put_back(bob))
+        self.assertEqual((bob.inventory.count("wood"), bob.inventory.count("stone")), (0, 0))
+        self.assertEqual((self.store.get("wood"), self.store.get("stone")), (5, 3))
+        self.assertFalse(self.e.possessions.put_back(bob))
+
+    def test_npcs_take_only_the_next_meal_from_the_store(self):
+        from world.items import KEEPING
+        bob = self.e.player("Bob")
+        self.e.possessions.deliver([{"item": "berries", "count": 40}])
+        self.assertTrue(self.e.possessions.restock(bob))
+        portion, per = self.e.possessions._portion("food"), ITEMS["berries"].use["food"]
+        self.assertLess((bob.inventory.count("berries") - 1) * per, KEEPING["restock_meals"] * portion)
 
     def test_hungry_npcs_take_varied_food_from_the_store(self):
         bob = self.e.player("Bob")
@@ -288,7 +315,7 @@ class ToolsAndResearchTest(WorkTest):
         event = next(ev for ev in self.e.events if ev[2] == "work_done" and ev[3]["player"] == "Imani")
         self.assertEqual(event[3]["ammo"], ["flint_arrows"])
         from core import work as WORK
-        self.assertGreater(self.e._tool_yield(WORK.TASKS["hunt"], "flint_arrows"), 1.0)
+        self.assertGreater(self.e.production._tool_yield(WORK.TASKS["hunt"], "flint_arrows"), 1.0)
 
     def test_a_bow_without_arrows_falls_back_to_a_spear(self):
         self.gov.innovation_pool.discovered.update({"Toolmaking", "Hunting", "Archery"})
@@ -298,7 +325,7 @@ class ToolsAndResearchTest(WorkTest):
         self.assertIsNotNone(self.e.work_problem(imani, "work", "hunt"))  # a bow, no arrows, no spear
         self.e.possessions.deliver([{"item": "wooden_spear", "count": 1}])
         from core import work as WORK
-        self.assertEqual(self.e._tool_for(imani, WORK.TASKS["hunt"]), "wooden_spear")
+        self.assertEqual(self.e.production._tool_for(imani, WORK.TASKS["hunt"]), "wooden_spear")
         self.assertIsNone(self.e.work_problem(imani, "work", "hunt"))
 
 
@@ -323,13 +350,13 @@ class SitesAndGardensTest(WorkTest):
         self.gov.innovation_pool.discovered.add("Sustenance Gardening")
         self.assertTrue(self.gov.can_take_occupation("Sustenance Gardener", esi)[0])
         self.gov.occupations["Sustenance Gardener"].append(esi)
-        self.e.sites.clear()
+        self.e.production.sites.clear()
         from core import work as WORK
         self.assertEqual(WORK.TASKS["tend_garden"].yields, [])  # plants the place; Gatherers do the gathering
         esi = self.actor("Esi")
         self.assertTrue(self.e.apply(esi, find(self.e, esi, "work", task="tend_garden")))
         self.finish("Esi")
-        self.assertEqual([(x["kind"] in ("plants", "herbs"), x["by"]) for x in self.e.sites], [(True, "Esi")])
+        self.assertEqual([(x["kind"] in ("plants", "herbs"), x["by"]) for x in self.e.production.sites], [(True, "Esi")])
 
 
 class ToolmakingAndWearTest(unittest.TestCase):

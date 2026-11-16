@@ -1,0 +1,76 @@
+{
+  "key": "kingdom",
+  "name": "Kingdom",
+  "description": "A monarch appoints nobles and officials and can reform the state by decree. Only the nobles, acting together, can depose the monarch.",
+  "requires": ["Centralized Authority"],
+  "reformed_by": {"method": "appointment", "appointer": "Monarch"},
+  "max_offices_per_player": 1,
+  "member_interfaces": ["infrastructure"],
+  "member_points": 1,
+  "carry_over": {
+    "Clan Leader": "Monarch",
+    "Chieftain": "Monarch",
+    "Sacred Chief": "Monarch",
+    "Magistrate": "Monarch",
+    "Elder": "Noble",
+    "Council Member": "Noble",
+    "Priest": "High Priest",
+    "Spirit Keeper": "High Priest",
+    "War Leader": "General",
+    "Commander": "General",
+    "Temple Guard Captain": "General",
+    "Steward": "Treasurer",
+    "Scribe": "Treasurer"
+  },
+  "offices": {
+    "Monarch": {
+      "description": "Rules the kingdom, makes its laws, and appoints its officials.",
+      "seats": 1,
+      "interfaces": ["leadership", "legislative"],
+      "points": 8,
+      "selected_by": {"method": "council_vote", "council": "Noble", "fallback": "tribe_vote"},
+      "removed_by": {"method": "council_vote", "council": "Noble"}
+    },
+    "Noble": {
+      "description": "Holds land and judges in the monarch's name; together the nobles can depose the monarch.",
+      "seats": 4,
+      "interfaces": ["judicial", "civic_representation"],
+      "points": 3,
+      "selected_by": {"method": "appointment", "appointer": "Monarch"},
+      "removed_by": {"method": "appointment", "appointer": "Monarch"}
+    },
+    "High Priest": {
+      "description": "Leads the kingdom's worship at the monarch's pleasure.",
+      "seats": 1,
+      "interfaces": ["religious"],
+      "points": 3,
+      "selected_by": {"method": "appointment", "appointer": "Monarch"},
+      "removed_by": {"method": "appointment", "appointer": "Monarch"}
+    },
+    "General": {
+      "description": "Commands the kingdom's armies and scouts.",
+      "seats": 1,
+      "interfaces": ["military", "intelligence"],
+      "points": 3,
+      "selected_by": {"method": "appointment", "appointer": "Monarch"},
+      "removed_by": {"method": "appointment", "appointer": "Monarch"}
+    },
+    "Treasurer": {
+      "description": "Collects and spends the kingdom's wealth.",
+      "seats": 1,
+      "interfaces": ["economic"],
+      "points": 3,
+      "selected_by": {"method": "appointment", "appointer": "Monarch"},
+      "removed_by": {"method": "appointment", "appointer": "Monarch"}
+    }
+  },
+  "statuses": {
+    "Outcast": {
+      "description": "Banished from the kingdom. Holds no office and has no voice.",
+      "requires": ["Ostracism"],
+      "granted_by": {"method": "appointment", "appointer": "Monarch"},
+      "revoked_by": {"method": "appointment", "appointer": "Monarch"},
+      "effects": ["loses_office", "cannot_hold_office", "cannot_vote", "no_member_interfaces"]
+    }
+  }
+}

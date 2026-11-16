@@ -1,0 +1,18 @@
+{
+  "name": "Warrior",
+  "icon": "🪖",
+  "appointed_by": ["Clan Leader", "War Leader", "Commander", "General", "Temple Guard Captain", "Elder", "Spirit Keeper"],
+  "attributes": ["strength", "constitution"],
+  "skill": "combat",
+  "points": 1,
+  "requires": ["Camp Defense"],
+  "interfaces": ["military"],
+  "description": "Defends the group and its territory.",
+  "also_trains": {"scouting": 0.2},
+  "needs_tools": ["wooden_spear", "flint_spear"],
+  "contributes": {"safety": {"amount": 1.0, "while_working": 2.0}},
+  "speeds_contentment": {"safety": {"curve": [[0, 1.0], [1, 1.5], [2, 1.9], [4, 2.5]]}},
+  "tasks": {
+    "patrol": {"label": "Patrol the camp", "life_hours": 2, "skill": "combat", "tools": ["flint_spear", "wooden_spear"]}
+  }
+}

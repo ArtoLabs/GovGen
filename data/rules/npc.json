@@ -1,6 +1,15 @@
 {
   "_comment": "How eager NPCs are. NPCs always look after their bodies; everything else they do much less than the player, and politics only when they are unhappy. Raise numbers for livelier NPCs.",
   "distress_damping": 0.6,
+  "asking": {
+    "_comment": "When someone asks an NPC for items (or offers a trade worth less than what they want), the NPC may give the unpaid part out of goodwill. Chance = (base + compassion x 'compassion' - ambition x 'ambition') x, for each item asked for, ('all_of_it' + (1 - 'all_of_it') x (1 - asked/have) ^ 'curve') x (1 - 'own_need' x how badly they need it themselves, for food and water). So 1 of their 10 is easy to get, all of it rarely.",
+    "base": 0.85,
+    "compassion": 0.3,
+    "ambition": 0.25,
+    "all_of_it": 0.05,
+    "curve": 1.5,
+    "own_need": 0.8
+  },
   "_distress_comment": "'distress_damping': a hungry, thirsty, cold or exhausted NPC is this much less keen on anything but looking after themselves (x how urgent their worst need is), except work that brings back what they lack.",
   "discontent": {
     "_comment": "A satisfaction meter below 'starts_below' makes people restless; at 'full_at' fully so. For politics against those in charge, they act on it only once their patience runs out (society.json 'satisfaction.patience').",
@@ -36,7 +45,9 @@
     "free": 2.0,
     "days_between": 30,
     "max_queue": 3,
-    "cheapest_first": true
+    "cheapest_first": true,
+    "cost_scale": 650,
+    "_cost_scale_comment": "An innovation costing this many points counts as one full step dearer when NPCs weigh what to research (costs are in each age's innovations.json)."
   },
   "politics_years_between": 12,
   "dismiss": {

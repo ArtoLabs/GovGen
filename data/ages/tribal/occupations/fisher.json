@@ -1,0 +1,23 @@
+{
+  "name": "Fisher",
+  "icon": "🐟",
+  "appointed_by": ["Clan Leader", "Chieftain", "Sacred Chief", "Steward", "Elder", "Spirit Keeper"],
+  "attributes": ["dexterity", "wisdom"],
+  "skill": "fishing",
+  "points": 1,
+  "description": "Spears, traps and nets fish in rivers and shallows.",
+  "requires": ["Fishing"],
+  "needs_tools": ["fishing_spear"],
+  "contributes": {"food": {"amount": 1.3, "category": "fish"}},
+  "tasks": {
+    "fish": {
+      "label": "Go fishing",
+      "life_hours": 2,
+      "skill": "fishing",
+      "requires": ["Fishing"],
+      "tools": ["fishing_spear"],
+      "yields": [{"item": "fish", "amount": 3}],
+      "site": "fish"
+    }
+  }
+}

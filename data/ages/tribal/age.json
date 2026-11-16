@@ -1,0 +1,28 @@
+{
+  "_comment": "This age. Its folder name is its key. 'order': ages come in this order. 'requires': innovations (of earlier ages) that must all be discovered to enter it. 'government_on_arrival': on entering, the government becomes the first of these (keys in this age's governments/ folder) whose own 'requires' are researched, else the last. 'innovation_cost_multiplier': every cost in this age's innovations.json is multiplied by it (1: the cost in the file is the cost in the game). 'terms': what this age calls things on screen and in the chronicle (a government file may override them with its own 'terms'). 'store_panel': what the top bar shows of the shared store, left to right; a group takes 'items' (item keys) and/or 'kinds' (every item of that kind); 'empty_warning': red when there are none. A later age inherits the panel and terms of the age before unless it sets its own.",
+  "order": 1,
+  "name": "Tribal Age",
+  "description": "Small kin groups that move with the seasons. Leadership is by influence and agreement.",
+  "requires": [],
+  "starting_innovations": ["Fire", "Language", "Tribalism", "Hierarchy"],
+  "innovation_cost_multiplier": 1,
+  "terms": {
+    "society": "tribe",
+    "members": "Tribe",
+    "member": "Tribe member",
+    "store": "Camp",
+    "store_name": "camp store",
+    "home": "camp"
+  },
+  "store_panel": [
+    {"label": "wood", "icon": "🪵", "items": ["wood"], "empty_warning": true},
+    {"label": "food", "icon": "🍖", "kinds": ["food"], "empty_warning": true},
+    {"label": "water", "icon": "💧", "kinds": ["water"], "empty_warning": true},
+    {"label": "minerals", "icon": "🪨", "items": ["stone", "flint"]},
+    {"label": "medicine", "icon": "🌿", "items": ["herbs"], "kinds": ["medicine"]},
+    {"label": "tools", "icon": "🔨", "kinds": ["tool"]}
+  ],
+  "_start_comment": "The first age also says what a new game starts with: 'starting_inventory' is what everyone carries (players.json 'inventory' adds to it per person) and 'starting_store' what the shared store holds (empty: everything must be gathered).",
+  "starting_inventory": [{"item": "water", "count": 1}, {"item": "berries", "count": 1}],
+  "starting_store": []
+}

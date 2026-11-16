@@ -1,19 +1,5 @@
 {
-  "_comment": "Items people carry. Every item: name, icon, description, 'max_stack' (how many fit in one inventory slot), 'value' (what it is worth in a trade; NPCs compare values, and value more what they need), 'kind' (food, water, material, tool, medicine: for menus and the camp store), and optional 'use': needs (or 'health') it restores, with 'use_label' and 'use_announce'. Items whose 'use' restores food are what people eat at a meal; those restoring water are what they drink (see character.json care actions with 'consumes'). 'tool': {'breaks': chance it breaks each time it is used for work, 'uses': how many times it can be used before it is worn out and breaks for certain (it wears down one use each time; a worn tool keeps its wear in packs and in the camp store)}. 'counts_as': items this one can stand in for, a better version of them (a flint spear counts as a wooden spear): wherever work needs or uses up one of those, this one does too (and is used first), and it counts toward their stock in the camp store. 'inventory' sets how many slots everyone has. 'starting_inventory' is what everyone carries at the start (players.json 'inventory' adds to it per person); 'camp_store' is what the tribe has in its shared store at the start (empty: the tribe starts with nothing and must gather everything). 'trade_offer_life_hours' is how long (in day-night hours) an offer stays open. 'barter_requires': innovations needed before people can trade (offer something of theirs for something of someone else's); until then they can only give things and ask for them as gifts.",
-  "inventory": {
-    "slots": 16,
-    "columns": 4
-  },
-  "trade_offer_life_hours": 2,
-  "keeping": {
-    "_comment": "What people do with what work brings back. It goes into the worker's own pack. You (a human player) keep it all and decide yourself what to put in the camp store (only what doesn't fit goes there). NPCs keep enough for themselves and put only the excess in the store: food for 'meals' meals, water for 'drinks' drinks, up to 'own_tools' of each tool their own work uses, up to 'own_materials' of each material their own work uses up, up to 'medicine' of each medicine; everything else goes to the store. An NPC whose pack holds less than 'restock_below_meals' meals (or drinks) takes food (as varied as it can) or water from the store, up to 'meals'/'drinks'. Nobody eats or drinks from the store directly: it must be in their pack.",
-    "meals": 2,
-    "drinks": 2,
-    "own_tools": 1,
-    "own_materials": 6,
-    "medicine": 1,
-    "restock_below_meals": 1
-  },
+  "_comment": "The things of this age. Every item: name, icon, description, 'max_stack' (how many fit in one inventory slot), 'value' (what it is worth in a trade), 'kind' (food, water, material, tool, medicine: for menus and the store panel) and optional 'use': the needs (or 'health') it restores, with 'use_label' and 'use_announce'. 'tool': {'breaks': chance it breaks each time it is used for work, 'uses': how many times it can be used before it is worn out}. 'counts_as': lesser items this one stands in for (a flint spear counts as a wooden spear). A later age adds its own items in its own items.json.",
   "items": {
     "berries": {
       "name": "Berries",
@@ -22,9 +8,7 @@
       "description": "Wild berries and nuts. A handful, not a meal.",
       "max_stack": 20,
       "value": 1,
-      "use": {
-        "food": 12
-      },
+      "use": {"food": 12},
       "use_label": "Eat",
       "use_announce": "eats a handful of berries"
     },
@@ -35,9 +19,7 @@
       "description": "Starchy roots and tubers dug from the ground.",
       "max_stack": 20,
       "value": 2,
-      "use": {
-        "food": 18
-      },
+      "use": {"food": 18},
       "use_label": "Eat",
       "use_announce": "eats some roots"
     },
@@ -48,9 +30,7 @@
       "description": "Meat from a hunt. The richest food there is.",
       "max_stack": 10,
       "value": 5,
-      "use": {
-        "food": 35
-      },
+      "use": {"food": 35},
       "use_label": "Eat",
       "use_announce": "eats some meat"
     },
@@ -61,9 +41,7 @@
       "description": "Fish from the river.",
       "max_stack": 10,
       "value": 4,
-      "use": {
-        "food": 28
-      },
+      "use": {"food": 28},
       "use_label": "Eat",
       "use_announce": "eats a fish"
     },
@@ -74,9 +52,7 @@
       "description": "Water carried up from the river.",
       "max_stack": 10,
       "value": 2,
-      "use": {
-        "water": 30
-      },
+      "use": {"water": 30},
       "use_label": "Drink",
       "use_announce": "drinks some water"
     },
@@ -135,10 +111,7 @@
       "max_stack": 1,
       "value": 3,
       "description": "A heavy stick with an edge rubbed sharp on a rock. Better than bare hands for gathering wood.",
-      "tool": {
-        "breaks": 0.15,
-        "uses": 10
-      }
+      "tool": {"breaks": 0.15, "uses": 10}
     },
     "hand_axe": {
       "name": "Stone Hand Axe",
@@ -147,13 +120,8 @@
       "description": "A heavy stone chopper. Makes cutting wood much quicker.",
       "max_stack": 1,
       "value": 8,
-      "tool": {
-        "breaks": 0.06,
-        "uses": 25
-      },
-      "counts_as": [
-        "wooden_hand_axe"
-      ]
+      "tool": {"breaks": 0.06, "uses": 25},
+      "counts_as": ["wooden_hand_axe"]
     },
     "wooden_knife": {
       "name": "Wooden Knife",
@@ -162,10 +130,7 @@
       "max_stack": 1,
       "value": 2,
       "description": "A splinter of hard wood ground to a point. Helps a little with butchering game.",
-      "tool": {
-        "breaks": 0.15,
-        "uses": 8
-      }
+      "tool": {"breaks": 0.15, "uses": 8}
     },
     "stone_knife": {
       "name": "Stone Knife",
@@ -174,13 +139,8 @@
       "description": "A sharp stone flake. A hunter with one brings back more from each kill.",
       "max_stack": 1,
       "value": 6,
-      "tool": {
-        "breaks": 0.06,
-        "uses": 25
-      },
-      "counts_as": [
-        "wooden_knife"
-      ]
+      "tool": {"breaks": 0.06, "uses": 25},
+      "counts_as": ["wooden_knife"]
     },
     "wooden_spear": {
       "name": "Wooden Spear",
@@ -189,10 +149,7 @@
       "description": "A long stick, sharpened and hardened in the fire: enough to hunt and to defend.",
       "max_stack": 1,
       "value": 8,
-      "tool": {
-        "breaks": 0.12,
-        "uses": 12
-      }
+      "tool": {"breaks": 0.12, "uses": 12}
     },
     "flint_spear": {
       "name": "Flint Spear",
@@ -201,13 +158,8 @@
       "description": "A spear tipped with knapped flint. Kills cleanly and lasts.",
       "max_stack": 1,
       "value": 14,
-      "tool": {
-        "breaks": 0.06,
-        "uses": 25
-      },
-      "counts_as": [
-        "wooden_spear"
-      ]
+      "tool": {"breaks": 0.06, "uses": 25},
+      "counts_as": ["wooden_spear"]
     },
     "fishing_spear": {
       "name": "Fishing Spear",
@@ -216,10 +168,7 @@
       "description": "A pronged stick sharpened for spearing fish in the shallows.",
       "max_stack": 1,
       "value": 8,
-      "tool": {
-        "breaks": 0.08,
-        "uses": 15
-      }
+      "tool": {"breaks": 0.08, "uses": 15}
     },
     "bow": {
       "name": "Bow",
@@ -228,10 +177,7 @@
       "description": "A bent stave of springy wood with a cord. Takes game from a distance (uses arrows).",
       "max_stack": 1,
       "value": 20,
-      "tool": {
-        "breaks": 0.04,
-        "uses": 40
-      }
+      "tool": {"breaks": 0.04, "uses": 40}
     },
     "arrows": {
       "name": "Wooden Arrows",
@@ -248,9 +194,7 @@
       "max_stack": 20,
       "value": 2,
       "description": "Arrows tipped with knapped flint: they fly true and bite deep.",
-      "counts_as": [
-        "arrows"
-      ]
+      "counts_as": ["arrows"]
     },
     "poultice": {
       "name": "Poultice",
@@ -259,75 +203,9 @@
       "description": "Crushed herbs bound in a leaf. Heals.",
       "max_stack": 10,
       "value": 6,
-      "use": {
-        "health": 25
-      },
+      "use": {"health": 25},
       "use_label": "Apply",
       "use_announce": "applies a healing poultice"
     }
-  },
-  "starting_inventory": [
-    {
-      "item": "water",
-      "count": 1
-    },
-    {
-      "item": "berries",
-      "count": 1
-    }
-  ],
-  "camp_store": [],
-  "camp_summary": {
-    "_comment": "What the top bar shows of the camp store, left to right: how many items of each group are in the store (the same counts as the camp store in the inventory window, I). A group takes 'items' (item keys) and/or 'kinds' (every item of that kind: food, water, material, tool, medicine). 'empty_warning': shown in red when there are none.",
-    "groups": [
-      {
-        "label": "wood",
-        "icon": "🪵",
-        "items": [
-          "wood"
-        ],
-        "empty_warning": true
-      },
-      {
-        "label": "food",
-        "icon": "🍖",
-        "kinds": [
-          "food"
-        ],
-        "empty_warning": true
-      },
-      {
-        "label": "water",
-        "icon": "💧",
-        "kinds": [
-          "water"
-        ],
-        "empty_warning": true
-      },
-      {
-        "label": "stone",
-        "icon": "🪨",
-        "items": [
-          "stone"
-        ]
-      },
-      {
-        "label": "herbs",
-        "icon": "🌿",
-        "items": [
-          "herbs"
-        ]
-      },
-      {
-        "label": "tools",
-        "icon": "🔨",
-        "kinds": [
-          "tool"
-        ]
-      }
-    ]
-  },
-  "barter_requires": [
-    "Barter System"
-  ]
+  }
 }

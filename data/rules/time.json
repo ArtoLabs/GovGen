@@ -1,12 +1,7 @@
 {
   "_comment": "The game calendar and how long things take, in game time. Playback speed (real seconds per game year) is in settings.json. 'news_travel_days': someone resting at home hears that nominations or voting have opened within this many days. 'start_after_dawn': the game begins this share of a day-night cycle after dawn. 'office_grace_life_days': someone who has just taken an office (by election, appointment, persuasion or challenge) can't be persuaded against, challenged or voted out for this many day-night cycles: a chance to prove themselves.",
   "days_per_year": 360,
-  "seasons": [
-    "Spring",
-    "Summer",
-    "Autumn",
-    "Winter"
-  ],
+  "seasons": ["Spring", "Summer", "Autumn", "Winter"],
   "action_hours": {
     "vote": 2,
     "nominate": 4,
@@ -22,20 +17,11 @@
     "resign": 12,
     "release": 12
   },
-  "wait_days": [
-    1,
-    3,
-    7,
-    14,
-    30,
-    60,
-    90
-  ],
+  "wait_days": [1, 3, 7, 14, 30, 60, 90],
   "nomination_days": 30,
   "voting_days": 30,
   "motion_days": 30,
   "reform_cooldown_years": 3,
-  "innovation_cost_multiplier": 13,
   "day_night_cycle_days": 1080,
   "dawn": 0.25,
   "dusk": 0.75,
@@ -61,15 +47,7 @@
       "rally",
       "release"
     ],
-    "during": [
-      "work",
-      "craft",
-      "wait",
-      "care:eat",
-      "care:drink",
-      "care:warm_up",
-      "treat"
-    ],
+    "during": ["work", "craft", "wait", "care:eat", "care:drink", "care:warm_up", "treat"],
     "npc_check_days": 5,
     "npc_check_days_otherwise": 30
   },

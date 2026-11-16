@@ -1,24 +1,16 @@
-"""Innovations and ages, loaded from data/ages.json and data/innovations/*.json."""
+"""Innovations and ages, loaded from the age folders: data/ages/<age>/age.json and innovations.json."""
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 import random
 
-from core.calendar import INNOVATION_COST_MULTIPLIER
-from utils.data_files import DATA_DIR, load_json, json_files, require
+from utils import game_data
+from utils.data_files import require
 
-# Interfaces that may research innovations. Kept here (not imported from roles_config)
-# to avoid an import cycle: roles_config -> interfaces -> innovations.
-INTERFACE_ICONS = {
-    "leadership": "👑",
-    "legislative": "📜",
-    "judicial": "⚖️",
-    "military": "⚔️",
-    "intelligence": "🕵️",
-    "economic": "💰",
-    "infrastructure": "🏗️",
-    "religious": "🙏",
-    "civic_representation": "🏛️",
-}
+# The branches of government that may research innovations (data/rules/interfaces.json): key -> symbol.
+INTERFACE_ICONS: Dict[str, str] = {
+    key: spec.get("symbol", "•")
+    for key, spec in game_data.public(game_data.rules("interfaces").get("interfaces", {})).items()}
+require(bool(INTERFACE_ICONS), "rules/interfaces.json", "needs at least one interface")
 
 
 @dataclass
@@ -30,6 +22,7 @@ class Age:
     starting_innovations: List[str] = field(default_factory=list)
     index: int = 0
     government_on_arrival: List[str] = field(default_factory=list)  # first whose research is done, on entering
+    cost_multiplier: float = 1.0  # every cost in this age's innovations.json is multiplied by it
 
 
 @dataclass
@@ -71,32 +64,30 @@ ALL_INNOVATIONS: Dict[str, Innovation] = {}
 def _load():
     AGES.clear(); AGES_BY_KEY.clear(); ALL_INNOVATIONS.clear()
 
-    ages_data = load_json(DATA_DIR / "ages.json")
-    require(isinstance(ages_data.get("ages"), list) and ages_data["ages"], "ages.json", "needs a non-empty 'ages' list")
-    for i, a in enumerate(ages_data["ages"]):
-        where = f"ages.json age #{i + 1}"
-        require("key" in a and "name" in a, where, "needs 'key' and 'name'")
-        require(a["key"] not in AGES_BY_KEY, where, f"duplicate age key '{a['key']}'")
-        age = Age(key=a["key"], name=a["name"], description=a.get("description", ""),
+    for i, folder in enumerate(game_data.AGE_FOLDERS):
+        a, where = folder.data, f"ages/{folder.key}/age.json"
+        mult = a.get("innovation_cost_multiplier", 1)
+        require(isinstance(mult, (int, float)) and mult > 0, where, "'innovation_cost_multiplier' must be above 0")
+        age = Age(key=folder.key, name=a["name"], description=a.get("description", ""),
                   requires=a.get("requires", []), starting_innovations=a.get("starting_innovations", []), index=i,
-                  government_on_arrival=list(a.get("government_on_arrival", [])))
+                  government_on_arrival=list(a.get("government_on_arrival", [])), cost_multiplier=float(mult))
         AGES.append(age)
         AGES_BY_KEY[age.key] = age
 
-    for path in json_files("innovations"):
-        data = load_json(path)
-        age_key = data.get("age")
-        require(age_key in AGES_BY_KEY, path.name, f"'age' must be one of {list(AGES_BY_KEY)}, got {age_key!r}")
+    for folder, file, data in game_data.age_files("innovations"):
+        age_key = folder.key
         for entry in data.get("innovations", []):
-            where = f"{path.name} '{entry.get('name', '?')}'"
+            where = f"{file} '{entry.get('name', '?')}'"
             require("name" in entry and "interface" in entry, where, "needs 'name' and 'interface'")
             require(entry["interface"] in INTERFACE_ICONS, where,
                     f"unknown interface '{entry['interface']}' (use one of {list(INTERFACE_ICONS)})")
             require(entry["name"] not in ALL_INNOVATIONS, where, "duplicate innovation name")
             unknown = set(entry) - {"name", "interface", "cost", "prerequisites", "description", "icon"}
             require(not unknown, where, f"unknown fields {sorted(unknown)}")
+            require(isinstance(entry.get("cost", 10), (int, float)) and entry.get("cost", 10) >= 0, where,
+                    "'cost' must be a number of innovation points (0 or more)")
             entry = dict(entry)
-            entry["cost"] = round(entry.get("cost", 10) * INNOVATION_COST_MULTIPLIER)
+            entry["cost"] = round(entry.get("cost", 10) * AGES_BY_KEY[age_key].cost_multiplier)
             ALL_INNOVATIONS[entry["name"]] = Innovation(age=age_key, **entry)
 
     # Cross-checks once everything is loaded.
@@ -107,11 +98,11 @@ def _load():
                     f"prerequisite '{prereq}' belongs to a later age ({ALL_INNOVATIONS[prereq].age})")
     for age in AGES:
         for name in age.requires:
-            require(name in ALL_INNOVATIONS, f"ages.json '{age.key}'", f"unknown required innovation '{name}'")
-            require(ALL_INNOVATIONS[name].age_index < age.index, f"ages.json '{age.key}'",
+            require(name in ALL_INNOVATIONS, f"ages/{age.key}/age.json", f"unknown required innovation '{name}'")
+            require(ALL_INNOVATIONS[name].age_index < age.index, f"ages/{age.key}/age.json",
                     f"required innovation '{name}' must come from an earlier age, or the age can never be reached")
         for name in age.starting_innovations:
-            require(name in ALL_INNOVATIONS, f"ages.json '{age.key}'", f"unknown starting innovation '{name}'")
+            require(name in ALL_INNOVATIONS, f"ages/{age.key}/age.json", f"unknown starting innovation '{name}'")
     _check_cycles()
 
 

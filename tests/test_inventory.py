@@ -1,5 +1,6 @@
 """Inventories: slots and stacks, the camp ground, giving, trading, using items, and saving."""
 import json
+import random
 import unittest
 
 from controllers.npc import NPCController
@@ -136,8 +137,25 @@ class PossessionsTest(unittest.TestCase):
         bad = {"id": 1, "give": [{"item": "stone", "count": 1}], "want": [{"item": "meat", "count": 1}]}
         good = {"id": 2, "give": [{"item": "stone", "count": 3}, {"item": "wood", "count": 2}],
                 "want": [{"item": "meat", "count": 1}]}
-        self.assertFalse(npc.answer_offer(view, bad).action.params["accept"])
-        self.assertTrue(npc.answer_offer(view, good).action.params["accept"])
+        npc.rng = random.Random(1)
+        took_bad = sum(npc.answer_offer(view, bad).action.params["accept"] for _ in range(200))
+        self.assertLess(took_bad, 70)  # her only meat for a stone: mostly no
+        self.assertTrue(all(npc.answer_offer(view, good).action.params["accept"] for _ in range(20)))
+
+    def test_npcs_share_a_little_of_a_lot_but_rarely_all_they_have(self):
+        self.imani.inventory.load([])
+        self.imani.inventory.add("stone", 10)
+        npc = NPCController("Imani", random.Random(2))
+        view = self.e.observe(self.imani)
+
+        def yes(n):
+            ask = {"id": 1, "give": [], "want": [{"item": "stone", "count": n}]}
+            return sum(npc.answer_offer(view, ask).action.params["accept"] for _ in range(400)) / 400
+        one, half, all_ = yes(1), yes(5), yes(10)
+        self.assertGreater(one, 0.7)
+        self.assertGreater(one, half)
+        self.assertGreater(half, all_)
+        self.assertLess(all_, 0.15)
 
     def test_inventories_ground_and_offers_survive_a_save(self):
         self.q(self.alice, "drop_item", slot=0, count=1)

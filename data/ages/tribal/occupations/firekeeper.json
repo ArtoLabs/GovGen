@@ -1,0 +1,22 @@
+{
+  "name": "Firekeeper",
+  "icon": "🏮",
+  "appointed_by": ["Chieftain", "Clan Leader", "Spirit Keeper", "Priest", "Elder"],
+  "attributes": ["constitution", "wisdom"],
+  "skill": "firekeeping",
+  "points": 1,
+  "requires": ["Fire"],
+  "description": "Keeps the communal fire burning by feeding it wood. Without a Firekeeper, or without wood, the fire goes out.",
+  "provides": ["fire"],
+  "volunteer": true,
+  "contributes": {"fire": {"amount": 1.0}},
+  "tasks": {
+    "tend_fire": {
+      "label": "Tend the fire",
+      "life_hours": 0.5,
+      "skill": "firekeeping",
+      "consumes": [{"item": "wood", "count": 2}],
+      "fire_life_hours": 5
+    }
+  }
+}

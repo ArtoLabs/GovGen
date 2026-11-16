@@ -1,0 +1,5 @@
+{
+  "_comment": "Rules for all occupations. 'max_per_player': how many occupations one person may hold. 'office_is_work': an office is its holder's work (taking one drops their occupation). The occupations themselves are one file each in data/ages/<age>/occupations/.",
+  "max_per_player": 1,
+  "office_is_work": true
+}

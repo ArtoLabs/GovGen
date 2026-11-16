@@ -1,4 +1,4 @@
-"""Characters: attributes, skills, bodily needs, health and aging, all defined by data/character.json.
+"""Characters: attributes, skills, bodily needs, health and aging, all defined by data/rules/character.json.
 
 This module knows nothing about governments, the engine or any display. It holds the rules for one
 person's body and abilities, so the same rules can later run on a server or be mirrored by an Unreal
@@ -12,6 +12,8 @@ them. A need below its 'critical' level wears down health; health at zero means 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from utils import game_data
+from utils.game_data import RULES_DIR
 from utils.data_files import DATA_DIR, load_json, require
 
 
@@ -92,7 +94,7 @@ class CareAction:
 
 
 class CharacterRules:
-    """The parsed contents of data/character.json."""
+    """The parsed contents of data/rules/character.json."""
 
     def __init__(self, data: Dict[str, Any]):
         where = "character.json"
@@ -155,7 +157,18 @@ class CharacterRules:
         return stage
 
 
-RULES = CharacterRules(load_json(DATA_DIR / "character.json"))
+# data/rules/character.json as it is in every age. An age (data/ages/<age>/rules/character.json) or a government
+# may change any of it: how fast needs fall, health, care actions, training... RULES is then set up again in
+# place from the version in force. Skills and attributes are different: the ones a later age adds are known
+# from the start (everyone simply has 0 in a skill nobody can use yet), so that occupations and offices of any
+# age can name them and nobody's sheet changes shape in the middle of a game.
+BASE_RULES: Dict[str, Any] = load_json(RULES_DIR / "character.json")
+for _over in game_data.age_rules("character").values():
+    for _table in ("skills", "attributes"):
+        for _key, _spec in game_data.public(_over.get(_table, {})).items():
+            BASE_RULES.setdefault(_table, {}).setdefault(_key, _spec)
+RULES = CharacterRules(BASE_RULES)
+game_data.switchable("character", BASE_RULES, RULES.__init__)
 
 
 def _clamp(value: float, low: float, high: float) -> float:

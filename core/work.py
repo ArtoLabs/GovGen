@@ -1,20 +1,62 @@
-"""Work that produces things (data/work.json): tasks people do in their job, and recipes they craft.
+"""Work that produces things: the tasks people do in their job, and the recipes they craft.
 
-The engine (core/engine.py) offers them as 'work' and 'craft' actions, takes inputs and tools when the
-work starts, and delivers what it yields into the camp store when it is done. This module only loads and
-checks the data and works out yields, so a server or an Unreal client can use the same rules.
+Where it is written:
+    data/ages/<age>/occupations/<job>.json   each occupation's own 'tasks' and 'recipes'
+    data/ages/<age>/work.json                work that is no occupation's: offices' work, work open to anyone,
+                                             and the age's site kinds and stock targets
+    data/rules/work.json                     the numbers behind all of it (trip chances, yields, the fire...)
+
+This module loads and checks that data and works out yields and chances. Doing the work (taking tools,
+bringing things back, finding places, feeding the fire) is core/production.py.
 """
 import random
 from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional
 
-from core.occupations import OCCUPATIONS
+from core.occupations import OCCUPATIONS, OCCUPATION_FILES, OCCUPATION_WHERE
 from innovations.innovation import ALL_INNOVATIONS
-from utils.data_files import DATA_DIR, load_json, require
+from utils import game_data
+from utils.data_files import require
 from world.character import RULES as CHARACTER
 from world.items import ITEMS
 
-_data = load_json(DATA_DIR / "work.json")
+BASE_RULES: Dict[str, Any] = game_data.rules("work")  # data/rules/work.json, before any age's changes
+
+
+def _collect() -> Dict[str, Any]:
+    """Every age's work in one table: {'tasks', 'recipes', 'site_kinds', 'stock_targets', 'craft_speed_tools'},
+    each task and recipe with the 'occupations' that do it and 'where' it is written."""
+    out: Dict[str, Any] = {"tasks": {}, "recipes": {}, "site_kinds": {}, "stock_targets": {}, "craft_speed_tools": {}}
+    seen: Dict[str, str] = {}
+
+    def add(kind: str, key: str, spec: Dict[str, Any], where: str, owner: Optional[str]):
+        require(key not in seen, where, f"{kind[:-1]} '{key}' is already defined in {seen.get(key)}")
+        seen[key] = where
+        spec = dict(spec)
+        require("occupations" not in spec or owner is None, f"{where} {kind[:-1]} '{key}'",
+                "an occupation's own work needs no 'occupations' (use 'also_done_by' for other occupations that do it too)")
+        also = list(spec.pop("also_done_by", []))
+        spec["occupations"] = ([owner] if owner else list(spec.get("occupations", []))) + also
+        spec["_where"] = f"{where} {kind[:-1]} '{key}'"
+        out[kind][key] = spec
+
+    for name, o in OCCUPATION_FILES.items():
+        for kind in ("tasks", "recipes"):
+            for key, spec in game_data.public(o.get(kind, {})).items():
+                add(kind, key, spec, OCCUPATION_WHERE[name], name)
+    for _age, where, data in game_data.age_files("work"):
+        for kind in ("tasks", "recipes"):
+            for key, spec in game_data.public(data.get(kind, {})).items():
+                add(kind, key, spec, where, None)
+        for table in ("site_kinds", "stock_targets", "craft_speed_tools"):
+            for key, value in game_data.public(data.get(table, {})).items():
+                require(key not in out[table], f"{where} {table}", f"'{key}' is already set by an earlier age")
+                out[table][key] = value
+    return out
+
+
+_data = _collect()
+_SITE_KINDS: Dict[str, Dict[str, Any]] = _data["site_kinds"]
 
 
 @dataclass
@@ -78,7 +120,7 @@ def _check_common(t: Dict[str, Any], where: str):
 def _load():
     tasks: Dict[str, Task] = {}
     for key, t in _data.get("tasks", {}).items():
-        where = f"work.json task '{key}'"
+        where = t["_where"]
         _check_common(t, where)
         for y in t.get("yields", []):
             require(y.get("item") in ITEMS, where, f"unknown item '{y.get('item')}'")
@@ -99,17 +141,17 @@ def _load():
                           done_text=str(t.get("done_text", "")))
         if t.get("finds_sites"):  # one task per site kind: the Scout chooses what to look for (work.json 'sites')
             base = tasks.pop(key)
-            for kind, spec in _data.get("sites", {}).get("kinds", {}).items():
+            for kind, spec in _SITE_KINDS.items():
                 tasks[f"{key}_{kind}"] = replace(base, key=f"{key}_{kind}", scouts_for=kind,
                                                  label=base.label.format(short=spec.get("short", kind),
                                                                          name=spec.get("name", kind)))
         for kind in t.get("makes_sites", {}).get("kinds", {}):
-            require(kind in _data.get("sites", {}).get("kinds", {}), where, f"makes_sites: unknown site kind '{kind}'")
-        require(t.get("site") is None or t["site"] in _data.get("sites", {}).get("kinds", {}), where,
-                f"unknown site kind '{t.get('site')}' (see 'sites.kinds')")
+            require(kind in _SITE_KINDS, where, f"makes_sites: unknown site kind '{kind}'")
+        require(t.get("site") is None or t["site"] in _SITE_KINDS, where,
+                f"unknown site kind '{t.get('site')}' (see 'site_kinds' in the age's work.json)")
     recipes: Dict[str, Task] = {}
     for key, r in _data.get("recipes", {}).items():
-        where = f"work.json recipe '{key}'"
+        where = r["_where"]
         _check_common(r, where)
         out = r.get("output", {})
         require(out.get("item") in ITEMS, where, f"unknown output item '{out.get('item')}'")
@@ -125,19 +167,56 @@ def _load():
 
 
 TASKS, RECIPES = _load()
-WORK_COUNTS_LIFE_HOURS: float = float(_data.get("work_counts_life_hours", 18))
-FIRE: Dict[str, float] = _data.get("fire", {"start_life_hours": 8, "max_life_hours": 14})
-TRIPS: Dict[str, float] = _data.get("trips", {})
-SITES: Dict[str, Any] = _data.get("sites", {})
-SITE_KINDS: Dict[str, Dict[str, str]] = SITES.get("kinds", {})
-WORK_FADES_LIFE_HOURS: float = float(_data.get("work_fades_life_hours", WORK_COUNTS_LIFE_HOURS))
-PRACTICE_DAYS_PER_TASK: float = float(_data.get("practice_days_per_task", 6))
-YIELD_ROLL: Dict[str, float] = _data.get("yield_roll", {})
-ANYONE_ATTRIBUTES: Dict[str, float] = dict(_data.get("anyone_attributes", {"constitution": 1.0, "wisdom": 1.0}))
+SITE_KINDS: Dict[str, Dict[str, str]] = _SITE_KINDS
 STOCK_TARGETS: Dict[str, float] = dict(_data.get("stock_targets", {}))
-AUTO_TAKE_TOOLS: bool = bool(_data.get("auto_take_tools", True))
 for _k in STOCK_TARGETS:
     require(_k in ("food", "water") or _k in ITEMS, "work.json stock_targets", f"unknown item '{_k}'")
+
+# The numbers behind work (data/rules/work.json). An age, or a government, may change them while the game runs
+# (data/ages/<age>/rules/work.json; a government file's "rules": {"work": {...}}): use_rules() puts the rules in
+# force into these tables, so everything that reads WORK.TRIPS, WORK.FIRE... follows the age.
+FIRE: Dict[str, float] = {}
+TRIPS: Dict[str, float] = {}
+SITES: Dict[str, Any] = {}
+YIELD_ROLL: Dict[str, float] = {}
+ANYONE_ATTRIBUTES: Dict[str, float] = {}
+WORK_COUNTS_LIFE_HOURS: float = 18.0
+WORK_FADES_LIFE_HOURS: float = 18.0
+PRACTICE_DAYS_PER_TASK: float = 6.0
+AUTO_TAKE_TOOLS: bool = True
+
+
+def _check_rules(r: Dict[str, Any], where: str):
+    for key in ("work_counts_life_hours", "work_fades_life_hours", "practice_days_per_task"):
+        require(isinstance(r.get(key, 1), (int, float)) and r.get(key, 1) >= 0, where, f"'{key}' must be a number, 0 or more")
+    for table in ("fire", "trips", "sites", "yield_roll", "anyone_attributes"):
+        require(isinstance(r.get(table, {}), dict), where, f"'{table}' must be an object")
+    for a in game_data.public(r.get("anyone_attributes", {})):
+        require(a in CHARACTER.attributes, f"{where} anyone_attributes", f"unknown attribute '{a}'")
+
+
+def rules_for(age_keys: List[str], government_key: Optional[str] = None) -> Dict[str, Any]:
+    """The work rules in force: data/rules/work.json, then each age reached, then the government."""
+    return game_data.rules_in_force("work", age_keys, government_key, BASE_RULES)
+
+
+def use_rules(r: Dict[str, Any]):
+    """Put these work rules in force (utils/game_data.py RuleSet does this for the game being played)."""
+    global WORK_COUNTS_LIFE_HOURS, WORK_FADES_LIFE_HOURS, PRACTICE_DAYS_PER_TASK, AUTO_TAKE_TOOLS
+    for table, key, default in ((FIRE, "fire", {"start_life_hours": 8, "max_life_hours": 14}), (TRIPS, "trips", {}),
+                                (SITES, "sites", {}), (YIELD_ROLL, "yield_roll", {}),
+                                (ANYONE_ATTRIBUTES, "anyone_attributes", {"constitution": 1.0, "wisdom": 1.0})):
+        table.clear()
+        table.update(game_data.public(r.get(key, default)))
+    WORK_COUNTS_LIFE_HOURS = float(r.get("work_counts_life_hours", 18))
+    WORK_FADES_LIFE_HOURS = float(r.get("work_fades_life_hours", WORK_COUNTS_LIFE_HOURS))
+    PRACTICE_DAYS_PER_TASK = float(r.get("practice_days_per_task", 6))
+    AUTO_TAKE_TOOLS = bool(r.get("auto_take_tools", True))
+
+
+_check_rules(BASE_RULES, "rules/work.json")
+use_rules(BASE_RULES)
+game_data.switchable("work", BASE_RULES, use_rules, _check_rules)
 
 
 # Offices with work of their own; the holders of any other office do the 'any_office' tasks.
@@ -150,7 +229,7 @@ def check_against_governments(government_types: Dict[str, Any]):
     for kind, table in (("task", TASKS), ("recipe", RECIPES)):
         for key, t in table.items():
             for o in t.offices:
-                require(o in offices, f"work.json {kind} '{key}'", f"'offices' names '{o}', which is not an office "
+                require(o in offices, f"work {kind} '{key}'", f"'offices' names '{o}', which is not an office "
                                                                     "in any government")
 
 

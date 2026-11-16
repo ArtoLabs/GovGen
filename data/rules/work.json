@@ -1,0 +1,28 @@
+{
+  "_comment": "How work goes, in every age unless an age overrides a value (put the same keys in data/ages/<age>/rules/work.json and they apply once that age is reached; a government file's 'rules': {'work': {...}} applies while that government is in place). 'work_counts_life_hours': a job counts as worked for this long after its work was last done, then fades over 'work_fades_life_hours'. 'yield_roll': what work brings back for a poor and a fine worker, and how much luck there is. 'anyone_attributes': what makes someone good at work open to anyone. 'fire': how long the fire burns. 'trips': the chance a trip out finds anything. 'sites': good places found or made. The tasks, recipes and site kinds themselves belong to each age: data/ages/<age>/occupations/ and data/ages/<age>/work.json.",
+  "work_counts_life_hours": 18,
+  "work_fades_life_hours": 18,
+  "practice_days_per_task": 6,
+  "yield_roll": {"at_quality_0": 0.5, "at_quality_100": 1.5, "luck": 0.3},
+  "anyone_attributes": {"constitution": 1.0, "wisdom": 1.0},
+  "fire": {"start_life_hours": 8, "max_life_hours": 14, "feed_at_quality_0": 0.7, "feed_at_quality_100": 1.29},
+  "trips": {
+    "_comment": "Trips out for something (tasks with a 'site') are a gamble: they bring anything back only with the task's own 'chance' (else 'base_chance'), plus 'quality_effect' x (work quality - 50) / 50, between 'min_chance' and 'max_chance'. While a found place of that kind has something left (see 'sites'), the trip goes there instead: it succeeds with 'with_site_chance' (1 = always: the place is known, it only has to be fetched) and brings back a big share of the place's abundance.",
+    "base_chance": 0.4,
+    "with_site_chance": 1.0,
+    "quality_effect": 0.1,
+    "min_chance": 0.05,
+    "max_chance": 0.97
+  },
+  "sites": {
+    "_comment": "Good places a Scout finds. A task with 'finds_sites' becomes one task per kind below ('<key>_<kind>', its label with {short}/{name} filled in): the Scout chooses what to look for, as a Gatherer chooses what to gather, and can only look for kinds someone could use now (an open job does that kind of trip). A Scout brings nothing back: the trip finds a place with 'find_chance' (plus 'find_quality_effect' x (work quality - 50) / 50), far likelier than a Gatherer's trip succeeding. A found place holds an abundance: 'loads' (a [min, max] range, or a kind's own 'loads') times an ordinary trip's haul. Each trip of that kind (anyone's) goes to the oldest place with something left, certainly succeeds (trips.with_site_chance) and brings back up to 'take_per_trip' loads (all of it if less than 'least_left' would be left); when nothing is left it is used up and the next place found is used. Unused, a place is lost after 'life_hours' of the day-night cycle. The last 'spent_shown' used-up or lost places stay listed (greyed) in the Found places panel. A Sustenance Gardener's plot (tasks with 'makes_sites') is a place too: 'loads' there (else 1), topping up their own plot of that kind. 'kinds': 'name' for the chronicle ('found ...'), 'short', 'icon', 'weight' (only for gardeners' plots), optional 'loads'.",
+    "life_hours": 24,
+    "find_chance": 0.85,
+    "find_quality_effect": 0.2,
+    "loads": [3, 5],
+    "take_per_trip": 2.0,
+    "least_left": 0.3,
+    "spent_shown": 4
+  },
+  "auto_take_tools": true
+}

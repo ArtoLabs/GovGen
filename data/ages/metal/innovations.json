@@ -1,0 +1,21 @@
+{
+  "_comment": "The innovations of this age. 'cost' is the innovation points it takes to research (times this age's 'innovation_cost_multiplier' in age.json, normally 1). 'interface': the branch of government that may research it (data/rules/interfaces.json). 'prerequisites' must come from this age or an earlier one.",
+  "innovations": [
+    {"name": "Writing", "icon": "📝", "interface": "legislative", "cost": 260, "prerequisites": ["Toolmaking", "Language"], "description": "Symbolic written communication."},
+    {"name": "Record Keeping", "icon": "📚", "interface": "legislative", "cost": 195, "prerequisites": ["Writing"], "description": "Structured records for governance."},
+    {"name": "Debt", "icon": "💸", "interface": "economic", "cost": 130, "prerequisites": ["Token Exchange"], "description": "Ability to owe at a later time."},
+    {"name": "Division of Labor", "icon": "👥", "interface": "economic", "cost": 130, "prerequisites": ["Debt"], "description": "Selecting members for specific duties."},
+    {"name": "Skill Specialization", "icon": "🎯", "interface": "economic", "cost": 130, "prerequisites": ["Division of Labor"], "description": "Increases the quality of production."},
+    {"name": "Trade Guilds", "icon": "🏪", "interface": "economic", "cost": 260, "prerequisites": ["Skill Specialization"], "description": "Organized merchant associations."},
+    {"name": "Marketplaces", "icon": "🛒", "interface": "economic", "cost": 195, "prerequisites": ["Trade", "Property"], "description": "Central locations for commerce."},
+    {"name": "Long-Distance Trade", "icon": "🐪", "interface": "economic", "cost": 130, "prerequisites": ["Trade", "The Wheel"], "description": "Increases the number of communities to trade with."},
+    {"name": "Taxation", "icon": "💰", "interface": "economic", "cost": 260, "prerequisites": ["Chieftainship", "Centralized Authority", "Property", "Oral Law", "Debt"], "description": "Systematic resource collection."},
+    {"name": "The Wheel", "icon": "🛞", "interface": "infrastructure", "cost": 260, "prerequisites": ["Toolmaking", "Domestication"], "description": "A classic invention for transport."},
+    {"name": "Infrastructure Planning", "icon": "📐", "interface": "infrastructure", "cost": 286, "prerequisites": ["Taxation"], "description": "Coordinated resource allocation."},
+    {"name": "Road Building", "icon": "🚧", "interface": "infrastructure", "cost": 234, "prerequisites": ["Infrastructure Planning", "The Wheel"], "description": "Constructed paths for transport."},
+    {"name": "Sacred Architecture", "icon": "🕌", "interface": "infrastructure", "cost": 234, "prerequisites": ["Infrastructure Planning", "Sacred Sites", "Stone Cutting"], "description": "Heightens the powers of priest and chief."},
+    {"name": "Monumental Architecture", "icon": "🗿", "interface": "infrastructure", "cost": 234, "prerequisites": ["Sacred Architecture", "Stone Cutting"], "description": "Heightens the powers of priest and chief."},
+    {"name": "Religion", "icon": "🛐", "interface": "religious", "cost": 325, "prerequisites": ["Ceremonies", "Sacred Architecture"], "description": "Organized spiritual beliefs."},
+    {"name": "Religious Authority", "icon": "📿", "interface": "religious", "cost": 195, "prerequisites": ["Religion"], "description": "Formal clergy or spiritual leaders."}
+  ]
+}

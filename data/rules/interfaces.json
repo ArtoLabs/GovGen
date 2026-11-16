@@ -1,0 +1,14 @@
+{
+  "_comment": "The branches of government (interfaces): an office or occupation that has one may research its innovations. 'symbol' is used for an innovation that has none of its own.",
+  "interfaces": {
+    "leadership": {"symbol": "👑"},
+    "legislative": {"symbol": "📜"},
+    "judicial": {"symbol": "⚖️"},
+    "military": {"symbol": "⚔️"},
+    "intelligence": {"symbol": "🕵️"},
+    "economic": {"symbol": "💰"},
+    "infrastructure": {"symbol": "🏗️"},
+    "religious": {"symbol": "🙏"},
+    "civic_representation": {"symbol": "🏛️"}
+  }
+}

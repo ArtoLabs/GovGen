@@ -1,4 +1,5 @@
-"""Items and inventories, defined by data/items.json.
+"""Items and inventories: the things of each age (data/ages/<age>/items.json) and the rules for carrying
+and trading them (data/rules/items.json).
 
 Like world/character.py this knows nothing of governments, the engine or any display. An inventory is a
 fixed number of slots; each slot is empty or holds a stack of one kind of item, up to that item's
@@ -10,9 +11,11 @@ an Unreal Engine inventory component.
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from utils.data_files import DATA_DIR, load_json, require
+from utils import game_data
+from utils.data_files import require
 
-_data = load_json(DATA_DIR / "items.json")
+_data = game_data.rules("items")
+_FIRST_AGE = game_data.AGE_FOLDERS[0].data  # a new game starts with what the first age's age.json says
 
 
 @dataclass
@@ -37,7 +40,14 @@ class ItemDef:
 
 
 ITEMS: Dict[str, ItemDef] = {}
-for _key, _d in _data.get("items", {}).items():
+ITEM_AGE: Dict[str, str] = {}  # item -> the age whose folder it comes from
+_raw_items: Dict[str, Dict[str, Any]] = {}
+for _age, _file, _age_items in game_data.age_files("items"):
+    for _key, _d in game_data.public(_age_items.get("items", {})).items():
+        require(_key not in _raw_items, f"{_file} item '{_key}'", f"already an item of the {ITEM_AGE.get(_key)} age")
+        _raw_items[_key] = _d
+        ITEM_AGE[_key] = _age.key
+for _key, _d in _raw_items.items():
     require("name" in _d, f"items.json item '{_key}'", "needs a 'name'")
     require(int(_d.get("max_stack", 1)) >= 1, f"items.json item '{_key}'", "'max_stack' must be at least 1")
     ITEMS[_key] = ItemDef(_key, _d["name"], _d.get("icon", "•"), _d.get("description", ""),
@@ -63,16 +73,17 @@ def substitutes(item: str) -> List[str]:
 
 
 BARTER_REQUIRES: List[str] = list(_data.get("barter_requires", []))
-CAMP_SUMMARY: List[Dict[str, Any]] = list(_data.get("camp_summary", {}).get("groups", []))
-for _g in CAMP_SUMMARY:
-    for _k in _g.get("items", []):
-        require(_k in ITEMS, "items.json camp_summary", f"unknown item '{_k}'")
+for _age in game_data.AGE_FOLDERS:
+    for _g in _age.data.get("store_panel", []):
+        require("label" in _g, f"ages/{_age.key}/age.json store_panel", "every group needs a 'label'")
+        for _k in _g.get("items", []):
+            require(_k in ITEMS, f"ages/{_age.key}/age.json store_panel", f"unknown item '{_k}'")
 
 
-def camp_summary(store: Dict[str, int]) -> List[Dict[str, Any]]:
-    """The top bar's groups (items.json 'camp_summary') with how many of each the store holds."""
+def store_summary(store: Dict[str, int], groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The top bar's groups (the age's 'store_panel' in age.json) with how many of each the store holds."""
     out = []
-    for g in CAMP_SUMMARY:
+    for g in groups:
         keys = {k for k, d in ITEMS.items() if d.kind in g.get("kinds", [])} | set(g.get("items", []))
         out.append({"label": g["label"], "icon": g.get("icon", "•"), "count": sum(store.get(k, 0) for k in keys),
                     "empty_warning": bool(g.get("empty_warning", False))})
@@ -93,8 +104,8 @@ def _stacks(entries: List[Dict[str, Any]], where: str) -> List[Dict[str, Any]]:
     return [{"item": e["item"], "count": int(e.get("count", 1))} for e in entries]
 
 
-STARTING_INVENTORY = _stacks(_data.get("starting_inventory", []), "items.json 'starting_inventory'")
-CAMP_STORE = _stacks(_data.get("camp_store", _data.get("camp_ground", [])), "items.json 'camp_store'")
+STARTING_INVENTORY = _stacks(_FIRST_AGE.get("starting_inventory", []), "age.json 'starting_inventory'")
+CAMP_STORE = _stacks(_FIRST_AGE.get("starting_store", []), "age.json 'starting_store'")
 
 
 def restoring(need: str) -> List[str]:

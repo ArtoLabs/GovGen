@@ -1,0 +1,83 @@
+{
+  "name": "Toolmaker",
+  "icon": "🪚",
+  "appointed_by": ["Clan Leader", "Steward", "Chieftain", "Elder", "Spirit Keeper"],
+  "attributes": ["intelligence", "dexterity"],
+  "skill": "crafting",
+  "points": 2,
+  "requires": ["Toolmaking"],
+  "description": "Knaps stone and shapes wood into the tribe's tools and weapons: axes, knives, spears, later bows.",
+  "contributes": {"tools": {"amount": 1.0}},
+  "recipes": {
+    "wooden_hand_axe": {
+      "requires": ["Toolmaking"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 2}],
+      "output": {"item": "wooden_hand_axe", "count": 1}
+    },
+    "wooden_knife": {
+      "requires": ["Toolmaking"],
+      "life_hours": 1.5,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 1}],
+      "output": {"item": "wooden_knife", "count": 1}
+    },
+    "wooden_spear": {
+      "requires": ["Toolmaking"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 2}],
+      "output": {"item": "wooden_spear", "count": 1}
+    },
+    "fishing_spear": {
+      "requires": ["Fishing"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 2}],
+      "output": {"item": "fishing_spear", "count": 1}
+    },
+    "bow": {
+      "requires": ["Archery"],
+      "life_hours": 9,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 3}],
+      "output": {"item": "bow", "count": 1}
+    },
+    "arrows": {
+      "requires": ["Archery"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 1}],
+      "output": {"item": "arrows", "count": 5}
+    },
+    "hand_axe": {
+      "requires": ["Stone Cutting"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "stone", "count": 2}],
+      "output": {"item": "hand_axe", "count": 1}
+    },
+    "stone_knife": {
+      "requires": ["Stone Cutting"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "stone", "count": 1}],
+      "output": {"item": "stone_knife", "count": 1}
+    },
+    "flint_spear": {
+      "requires": ["Stone Cutting"],
+      "life_hours": 6,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 2}, {"item": "flint", "count": 1}],
+      "output": {"item": "flint_spear", "count": 1}
+    },
+    "flint_arrows": {
+      "requires": ["Archery", "Stone Cutting"],
+      "life_hours": 3,
+      "skill": "crafting",
+      "inputs": [{"item": "wood", "count": 1}, {"item": "flint", "count": 1}],
+      "output": {"item": "flint_arrows", "count": 5}
+    }
+  }
+}

@@ -42,10 +42,10 @@ class TripTests(unittest.TestCase):
         self.assertGreaterEqual(WORK.site_find_chance(50), 0.8)
         for seed in range(20):
             random.seed(seed)
-            e._scout_for_sites(esi, "stone", 60)
-            if e.sites:
+            e.production._scout_for_sites(esi, "stone", 60)
+            if e.production.sites:
                 break
-        site = e.sites[0]
+        site = e.production.sites[0]
         self.assertEqual((site["kind"], site["by"]), ("stone", "Esi"))
         lo, hi = WORK.SITES["loads"]
         self.assertTrue(lo <= site["loads"] <= hi)  # several trips' worth
@@ -55,8 +55,8 @@ class TripTests(unittest.TestCase):
     def test_a_found_place_is_shared_out_over_trips_then_the_next_one_is_used(self):
         e = new_engine(3)
         give_work(e, "Bob")
-        first = e._add_site("plants", "Cleo", 3.5, 10 ** 4)
-        second = e._add_site("plants", "Hiro", 4, 10 ** 4)
+        first = e.production._add_site("plants", "Cleo", 3.5, 10 ** 4)
+        second = e.production._add_site("plants", "Hiro", 4, 10 ** 4)
         take = WORK.SITES["take_per_trip"]
 
         def forage():
@@ -67,28 +67,28 @@ class TripTests(unittest.TestCase):
         self.assertAlmostEqual(first["loads"], 3.5 - take)  # a big haul, with some left for the next trip
         self.assertEqual(second["loads"], 4)
         forage()
-        self.assertNotIn(first, e.sites)                     # the rest of it: used up
-        self.assertEqual(e.spent_sites[-1]["how"], "used up")
-        self.assertEqual(e.site_of("plants"), second)        # the next trip goes to the next place found
+        self.assertNotIn(first, e.production.sites)                     # the rest of it: used up
+        self.assertEqual(e.production.spent_sites[-1]["how"], "used up")
+        self.assertEqual(e.production.site_of("plants"), second)        # the next trip goes to the next place found
         view = e.observe(e.player("Bob"))["camp"]
         self.assertEqual([x["by"] for x in view["sites"]], ["Hiro"])
         self.assertEqual(view["spent_sites"][0]["by"], "Cleo")
 
     def test_an_unused_place_is_lost_in_time(self):
         e = new_engine()
-        site = e._add_site("wood", "Esi", 3, 2)
+        site = e.production._add_site("wood", "Esi", 3, 2)
         e.game_state.clock = site["until"] + 1
-        e._expire_sites()
-        self.assertFalse(e.site_known("wood"))
-        self.assertEqual(e.spent_sites[-1]["how"], "lost")
+        e.production._expire_sites()
+        self.assertFalse(e.production.site_known("wood"))
+        self.assertEqual(e.production.spent_sites[-1]["how"], "lost")
 
     def test_scouts_only_find_sites_someone_can_use(self):
         e = new_engine()
-        kinds = set(e.useful_site_kinds())
+        kinds = set(e.production.useful_site_kinds())
         self.assertIn("plants", kinds)        # Gatherers forage from the start
         self.assertNotIn("game", kinds)       # nobody can hunt before Hunting
         e.government.innovation_pool.discovered.add("Hunting")
-        self.assertIn("game", e.useful_site_kinds())
+        self.assertIn("game", e.production.useful_site_kinds())
 
     def test_npc_scouts_look_for_what_the_tribe_is_short_of(self):
         from controllers.npc import NPCController
@@ -109,21 +109,22 @@ class TripTests(unittest.TestCase):
         plants, _ = npc._scout_need(view, work["scout_plants"])
         stone, _ = npc._scout_need(view, work["scout_stone"])
         self.assertGreater(plants, 2 * stone)
-        e._add_site("plants", "Hiro", 5, 10 ** 4)  # already found, with plenty left: less need
+        e.production._add_site("plants", "Hiro", 5, 10 ** 4)  # already found, with plenty left: less need
         later, _ = npc._scout_need(e.observe(esi), work["scout_plants"])
         self.assertLess(later, plants)
 
     def test_sites_are_saved(self):
         from core.engine import GameEngine
         e = new_engine()
-        e._add_site("stone", "Esi", 4, 10)
-        e._spend_site(e._add_site("wood", "Esi", 1, 10), "used up")
+        e.production._add_site("stone", "Esi", 4, 10)
+        e.production._spend_site(e.production._add_site("wood", "Esi", 1, 10), "used up")
         loaded = GameEngine.from_dict(e.to_dict())
-        self.assertEqual((loaded.sites, loaded.spent_sites, loaded.next_site_id),
-                         (e.sites, e.spent_sites, e.next_site_id))
-        old = e.to_dict()
+        self.assertEqual((loaded.production.sites, loaded.production.spent_sites, loaded.production.next_site_id),
+                         (e.production.sites, e.production.spent_sites, e.production.next_site_id))
+        old = e.to_dict()  # a save from before core/production.py: the places at the top, one per kind
+        old.update(old.pop("production"))
         old["sites"] = {"stone": {"until": e.clock + 500, "by": "Esi", "trips": 2}}
-        self.assertEqual(GameEngine.from_dict(old).site_of("stone")["loads"], 2)
+        self.assertEqual(GameEngine.from_dict(old).production.site_of("stone")["loads"], 2)
 
 
 class ElderTests(unittest.TestCase):

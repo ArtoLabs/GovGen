@@ -1,10 +1,11 @@
-"""Game time. The clock counts hours since the start of the game; data/time.json sets the calendar."""
+"""Game time. The clock counts hours since the start of the game; data/rules/time.json sets the calendar."""
 import math
 from typing import Dict, List
 
+from utils.game_data import RULES_DIR
 from utils.data_files import DATA_DIR, load_json, require
 
-_data = load_json(DATA_DIR / "time.json")
+_data = load_json(RULES_DIR / "time.json")
 require(isinstance(_data.get("days_per_year"), int) and _data["days_per_year"] > 0, "time.json", "'days_per_year' must be a positive integer")
 require(_data.get("seasons") and _data["days_per_year"] % len(_data["seasons"]) == 0, "time.json",
         "'seasons' must divide the year evenly")
@@ -19,7 +20,6 @@ WAIT_DAYS: List[int] = _data.get("wait_days", [1, 7, 30])
 NOMINATION_HOURS = int(_data.get("nomination_days", 30) * HOURS_PER_DAY)
 VOTING_HOURS = int(_data.get("voting_days", 30) * HOURS_PER_DAY)
 MOTION_HOURS = int(_data.get("motion_days", 30) * HOURS_PER_DAY)
-INNOVATION_COST_MULTIPLIER: float = _data.get("innovation_cost_multiplier", 1)
 REFORM_COOLDOWN_HOURS = int(_data.get("reform_cooldown_years", 3) * HOURS_PER_YEAR)
 
 

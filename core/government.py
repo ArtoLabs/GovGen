@@ -37,6 +37,7 @@ class Government:
         # Set by the engine, which knows about items and work: is one of these tools at hand for this
         # player, and how much has this person been working lately (0-1)?
         self.tools_available = lambda tools, player: True
+        self.on_rules_change = lambda: None  # the age or the government changed: the engine re-reads its rules
         self.work_activity = lambda name: 1.0
         # ...is this person working their own job right now (which job: 'Hunter', 'office:Elder'), how many
         # tools for their job do they carry (and does any such tool exist yet), and is the fire burning and
@@ -50,13 +51,13 @@ class Government:
         # one above it, by 'authority') releases them or moves them, and nobody lower may change it.
         self.appointed_by: Dict[str, str] = {}
         # Someone was dismissed from a job ('dismissed') or moved to another ('reassigned'); the engine
-        # makes them (and onlookers) resent it (data/society.json 'satisfaction.job_loss').
+        # makes them (and onlookers) resent it (data/rules/society.json 'satisfaction.job_loss').
         self.on_job_loss = lambda player, how, job: None
         # Called when a leader appoints someone (from their old work, None if none, to the new): moving up or
-        # down the hierarchy of work warms or sours them to the leaders (data/society.json 'job_rank').
+        # down the hierarchy of work warms or sours them to the leaders (data/rules/society.json 'job_rank').
         self.on_job_change = lambda player, old, new: None
         # Set by the engine (core/life.py): is this person old enough for 'work' or for 'politics' (voting,
-        # office, leading, research)? Ages come from data/life.json.
+        # office, leading, research)? Ages come from data/rules/life.json.
         self.of_age = lambda player, what: True
         self.sick_count = lambda: 0  # how many people are ill now (core/life.py)
         # Set by the engine: a 'use' quality's level (society.json style 'use'), and the fading chunk an event (a
@@ -89,6 +90,10 @@ class Government:
     @property
     def age(self) -> Age:
         return AGES[self.age_index]
+
+    def age_keys(self) -> List[str]:
+        """The ages reached so far, oldest first ('tribal', 'stone'): their folders' rules are in force."""
+        return [a.key for a in AGES[:self.age_index + 1]]
 
     def is_unlocked(self, requires: List[str]) -> bool:
         return all(req in self.innovation_pool.discovered for req in requires)
@@ -281,7 +286,7 @@ class Government:
         return job if job and job in self.jobs_of(player) else None
 
     # ------------------------------------------------------------------ #
-    # The hierarchy of appointments (offices' 'authority' in data/governments)
+    # The hierarchy of appointments (offices' 'authority' in data/ages/<age>/governments)
     # ------------------------------------------------------------------ #
     def office_authority(self, office: str) -> float:
         o = self.government_type.offices.get(office)
@@ -610,10 +615,11 @@ class Government:
         while self.age_index < new_index:
             self.age_index += 1
             Messages.add(f"*** The society enters the {self.age.name}! {self.age.description} ***")
+            self.on_rules_change()
         self.evolve_government()
 
     def arrival_government(self) -> Optional[GovernmentType]:
-        """The government the society grows into in its current age (ages.json 'government_on_arrival'):
+        """The government the society grows into in its current age (age.json 'government_on_arrival'):
         the first whose research is done, else the last one. None if the age has no such list."""
         discovered = self.innovation_pool.discovered
         forms = [get_government_type(k) for k in self.age.government_on_arrival]
@@ -709,6 +715,7 @@ class Government:
         self.appointed_by = {n: self._carry_target(new, o) for n, o in self.appointed_by.items()
                              if self._carry_target(new, o)}
         Messages.add(announce, reason=reason)
+        self.on_rules_change()
         for old_office, holders in old_assignments.items():
             target = self._carry_target(new, old_office)
             for player in holders:
@@ -747,7 +754,7 @@ class Government:
     def load_state(self, data: Dict, player):
         gov_type = get_government_type(data["government_type"])
         if gov_type is None:
-            raise ValueError(f"Saved government type '{data['government_type']}' no longer exists in data/governments")
+            raise ValueError(f"Saved government type '{data['government_type']}' no longer exists in data/ages/<age>/governments")
         self.government_type = gov_type
         self.assignments = {o: [player(n) for n in data["assignments"].get(o, [])] for o in gov_type.offices}
         self.statuses = {s: [player(n) for n in data["statuses"].get(s, [])] for s in gov_type.statuses}

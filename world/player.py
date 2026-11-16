@@ -17,7 +17,7 @@ class Player(Character):
         self.name = name
         self.description = description
         self.traits = traits or []
-        # Life (core/life.py, data/life.json): who they are born of, and what their body is going through.
+        # Life (core/life.py, data/rules/life.json): who they are born of, and what their body is going through.
         self.gender = gender if gender in RULES.genders else next(iter(RULES.genders), None)
         self.birth_day = int(birth_day if birth_day is not None else (17 + 53 * int(player_id)) % 300 + 30)  # day of the year
         self.mother = mother          # name of their mother, if known
@@ -26,12 +26,12 @@ class Player(Character):
         self.pregnancy = None         # {'since': clock, 'due': clock} while pregnant
         self.last_birth = None        # clock of the last child she bore
         self.growth = {}              # childhood: attribute -> points gathered toward the next whole point
-        self.satisfaction: dict = {}  # meters from data/society.json, kept by core/society.py
+        self.satisfaction: dict = {}  # meters from data/rules/society.json, kept by core/society.py
         self.expectations: dict = {}  # what they have grown used to, per meter
         self.grievances: dict = {}    # meter -> points held against the tribe (being dismissed...), fading
         self.unrest: dict = {}        # meter -> cycle-hours it has been low (society.json 'patience')
         self.content_detail: dict = {}  # what moved each meter at the last update (for display only, not saved)
-        self.inventory = Inventory()  # what they carry (world/items.py, data/items.json)
+        self.inventory = Inventory()  # what they carry (world/items.py, data/rules/items.json)
         for stack in [*(STARTING_INVENTORY if starting_items else []), *(inventory or [])]:
             self.inventory.add(stack["item"], stack["count"])
 

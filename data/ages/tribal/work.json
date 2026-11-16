@@ -1,0 +1,72 @@
+{
+  "_comment": "The work of this age that is not one occupation's own (each occupation's tasks and recipes are in its file in occupations/). 'tasks' with 'offices' are the work of those offices' holders; 'any_office': the work of any office with none of its own; tasks with neither are open to anyone. 'site_kinds': the kinds of good places that can be found or made (a task's 'site' names one). 'stock_targets': how much of each thing the society likes to hold (NPCs work toward it; 'food' and 'water' are points, the rest counts of items). 'craft_speed_tools': tools that make every recipe go that many times faster. The numbers behind trips, finds, the fire and yields are in data/rules/work.json.",
+  "tasks": {
+    "lead_ritual": {
+      "label": "Lead a ritual of comfort",
+      "offices": ["Spirit Keeper"],
+      "life_hours": 2,
+      "_comment": "The Spirit Keeper's work: while it lasts everyone's Comfort rises faster and the tribe's care and culture count more (society.json)."
+    },
+    "hold_council": {"label": "Hold council and settle disputes", "offices": ["Elder"], "life_hours": 2},
+    "office_duties": {
+      "label": "Attend to office duties",
+      "any_office": true,
+      "life_hours": 2,
+      "_comment": "The work of any office that has no task of its own (Clan Leader, Chieftain...)."
+    },
+    "carry_off_dead": {
+      "label": "Carry the dead away from camp",
+      "life_hours": 1.5,
+      "disposes_of_dead": true,
+      "illness_risk": 4,
+      "done_text": "carries {body} far from camp and covers the body with stones"
+    },
+    "burn_dead": {
+      "label": "Burn the dead on a pyre",
+      "life_hours": 1,
+      "requires": ["Fire"],
+      "consumes": [{"item": "wood", "count": 6}],
+      "disposes_of_dead": true,
+      "illness_risk": 1,
+      "done_text": "builds a pyre and burns {body}'s body"
+    },
+    "bury_dead": {
+      "label": "Bury the dead with rites",
+      "life_hours": 1.5,
+      "requires": ["Burial Rites"],
+      "disposes_of_dead": true,
+      "illness_risk": 1,
+      "done_text": "buries {body} with the old rites"
+    }
+  },
+  "recipes": {},
+  "site_kinds": {
+    "plants": {"name": "rich berry and root grounds", "short": "berry grounds", "icon": "🫐", "weight": 1},
+    "wood": {"name": "a stand of deadwood", "short": "deadwood", "icon": "🪵", "weight": 1},
+    "stone": {"name": "a bed of good stone", "short": "stone bed", "icon": "🪨", "weight": 1},
+    "game": {"name": "fresh game trails", "short": "game trails", "icon": "🦌", "weight": 1},
+    "fish": {"name": "a pool full of fish", "short": "fishing pool", "icon": "🐟", "weight": 1},
+    "herbs": {"name": "a patch of healing herbs", "short": "herb patch", "icon": "🌿", "weight": 1}
+  },
+  "stock_targets": {
+    "food": 160,
+    "water": 120,
+    "wood": 14,
+    "stone": 8,
+    "flint": 4,
+    "herbs": 4,
+    "hide": 2,
+    "wooden_hand_axe": 2,
+    "hand_axe": 2,
+    "wooden_knife": 2,
+    "stone_knife": 2,
+    "wooden_spear": 3,
+    "flint_spear": 3,
+    "fishing_spear": 2,
+    "bow": 2,
+    "arrows": 10,
+    "flint_arrows": 10,
+    "poultice": 3
+  },
+  "craft_speed_tools": {"stone_knife": 3.0, "hand_axe": 2.5, "wooden_knife": 1.5, "wooden_hand_axe": 1.3}
+}

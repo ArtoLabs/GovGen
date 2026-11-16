@@ -1,0 +1,16 @@
+{
+  "_comment": "Rules for carrying and trading things, the same in every age unless an age overrides them. 'inventory': how many slots everyone has. 'trade_offer_life_hours': how long (day-night hours) an offer stays open. 'barter_requires': innovations needed before people can trade one thing for another (until then they can only give and ask for gifts). The items themselves are in each age's items.json; what a new game starts with is in the first age's age.json.",
+  "inventory": {"slots": 16, "columns": 4},
+  "trade_offer_life_hours": 2,
+  "keeping": {
+    "_comment": "What people do with what work brings back. It goes into the worker's own pack. You (a human player) keep it all and decide yourself what to put in the camp store (only what doesn't fit goes there). NPCs keep enough for themselves and put only the excess in the store: food for 'meals' meals, water for 'drinks' drinks, up to 'own_tools' of each tool their own work uses, up to 'own_materials' of each material their own work uses up, up to 'medicine' of each medicine; everything else goes to the store. An NPC whose pack holds less than 'restock_below_meals' meals (or drinks) takes food (as varied as it can) from the store for 'restock_meals' meals (just the next one), and water up to 'drinks'. Materials only count as 'own' for one's own job's work (wood and stone for the Fire Tender and Toolmaker; work open to anyone, like laying the dead to rest, takes from the store), and NPCs put other materials they carry back in the store. Nobody eats or drinks from the store directly: it must be in their pack.",
+    "meals": 2,
+    "drinks": 2,
+    "own_tools": 1,
+    "own_materials": 6,
+    "medicine": 1,
+    "restock_below_meals": 1,
+    "restock_meals": 1
+  },
+  "barter_requires": ["Barter System"]
+}

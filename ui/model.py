@@ -442,13 +442,31 @@ def life_status(life: Dict[str, Any]) -> List[Tuple[str, str, str]]:
 
 
 def camp_line(view: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """The camp store at a glance (items.json 'camp_summary'): {label, icon, count, empty_warning} per group,
-    counted from the store itself, so it matches what the inventory window (I) shows."""
-    from world.items import camp_summary
+    """The shared store at a glance (the age's 'store_panel' in age.json): {label, icon, count, empty_warning}
+    per group, counted from the store itself, so it matches what the inventory window (I) shows."""
+    from world.items import store_summary
     poss = view.get("possessions")
     if not poss:
         return []
-    return camp_summary({s["item"]: s["count"] for s in poss["ground"]})
+    return store_summary({s["item"]: s["count"] for s in poss["ground"]}, view.get("store_panel", []))
+
+
+_terms: Dict[str, str] = {}
+
+
+def use_terms(view: Optional[Dict[str, Any]]):
+    """Remember what the game now calls things (the view's 'terms'), for term()."""
+    if view and view.get("terms"):
+        _terms.clear()
+        _terms.update(view["terms"])
+
+
+def term(word: str) -> str:
+    """What this age and government call something ('members': 'Tribe', 'store': 'Camp', 'member': 'Tribe
+    member', 'society': 'tribe', 'store_name': 'camp store', 'home': 'camp'). The words are data: the age's
+    age.json 'terms', which a government file may override."""
+    from utils.game_data import DEFAULT_TERMS
+    return _terms.get(word) or DEFAULT_TERMS.get(word, word)
 
 
 def _contest_power(view: Dict[str, Any], name: str, kind: str) -> float:
@@ -523,8 +541,8 @@ def _persuade_menu(group: ActionGroup, view: Dict[str, Any]) -> Menu:
     if view.get("in_contest") and view["in_contest"]["style"] == "audience":
         ic = view["in_contest"]
         return Menu(f"{ic['name']} against {ic['opponent']}: speak to whom?", items,
-                    "Each speech sways one listener; the crowd's lean shows in the Tribe panel.")
-    return Menu("Persuade", items, "Everyone's persuasion meter shows in the Tribe panel while a campaign runs."
+                    "Each speech sways one listener; the crowd's lean shows in the Government and votes panel.")
+    return Menu("Persuade", items, "Everyone's persuasion meter shows in the Government and votes panel while a campaign runs."
                 + protected_note(view))
 
 
@@ -573,10 +591,11 @@ def _challenge_menu(group: ActionGroup, view: Dict[str, Any]) -> Menu:
     return Menu("Challenge whom?", items, "Win and the office is yours; lose and you must wait." + protected_note(view))
 
 
-def contest_focus(view: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """The contest whose meters the Tribe panel shows: one you are in, else the first with meters."""
+def meter_contests(view: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The contests with a meter per listener (campaigns, orations), the ones you are in first:
+    the Government and votes panel shows each as a column of meters."""
     contests = [c for c in view.get("contests", []) if c["style"] in ("persuasion", "audience")]
-    return next((c for c in contests if c["your_role"] in ("challenger", "defender")), contests[0] if contests else None)
+    return sorted(contests, key=lambda c: c["your_role"] not in ("challenger", "defender"))
 
 
 # --------------------------------------------------------------------------- #

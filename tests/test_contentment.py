@@ -1,4 +1,4 @@
-"""Contentment (data/society.json 'satisfaction'): Work rises only while someone works their job, faster
+"""Contentment (data/rules/society.json 'satisfaction'): Work rises only while someone works their job, faster
 with the right tools and a wide choice of work for the age; Comfort follows a tended fire, care and the
 Spirit Keeper's rituals; Safety follows Warriors on patrol and filled positions; Leaders follows
 everything else, and slowly for someone appointed to work they are poorly suited for."""
@@ -90,11 +90,11 @@ class WorkContentTest(Base):
         two = factor("work", bob, self.gov, key="tools")
         self.assertLess(none, one)
         self.assertLess(one, two)
-        self.assertEqual(self.e.job_tools(bob), (2, True))
+        self.assertEqual(self.e.production.job_tools(bob), (2, True))
 
     def test_no_tool_is_missed_before_one_exists(self):
         bob = self.give_job("Bob", "Gatherer")  # a hand axe helps, but nobody can make one yet
-        self.assertEqual(self.e.job_tools(bob), (0, False))
+        self.assertEqual(self.e.production.job_tools(bob), (0, False))
         before = factor("work", bob, self.gov, key="tools")
         self.assertEqual(before, METERS["work"].multipliers["tools"]["none_invented"])
         self.gov.innovation_pool.discovered.add("Toolmaking")
@@ -130,9 +130,9 @@ class ComfortAndSafetyTest(Base):
         e = self.e
         self.assertEqual(e.fire_state(), "untended")  # it burns at the start, but nobody keeps it
         bob = self.give_job("Bob", "Firekeeper")
-        e.last_worked["Bob"] = e.clock
+        e.production.last_worked["Bob"] = e.clock
         self.assertEqual(e.fire_state(), "tended")
-        e.fire_until = e.clock
+        e.production.fire_until = e.clock
         self.assertEqual(e.fire_state(), "out")
         self.assertIsNotNone(bob)
 
@@ -144,7 +144,7 @@ class ComfortAndSafetyTest(Base):
         for state in ("tended", "untended", "out"):  # a fire merely burning (or not) changes nothing
             self.gov.fire_state = lambda s=state: s
             self.assertEqual(society.compute_qualities(self.gov)["fire"]["value"], level)
-        e.fire_until = e.clock + 10 ** 5
+        e.production.fire_until = e.clock + 10 ** 5
         cleo.needs["warmth"] = 30
         p = become_actor(e, "Cleo")
         self.assertTrue(e.apply(p, find(e, p, "care", kind="warm_up")))
@@ -157,7 +157,7 @@ class ComfortAndSafetyTest(Base):
     def test_spirit_keeper_ritual_comforts_everyone_and_counts_toward_care(self):
         esi, cleo = self.e.player("Esi"), self.e.player("Cleo")
         seat(self.gov, "Spirit Keeper", esi)
-        self.e.last_worked["Esi"] = self.e.clock
+        self.e.production.last_worked["Esi"] = self.e.clock
         care_before = society.compute_qualities(self.gov)["care"]["value"]
         before = factor("comfort", cleo, self.gov)
         self.start("Esi", "lead_ritual")
@@ -168,14 +168,14 @@ class ComfortAndSafetyTest(Base):
     def test_an_idle_spirit_keeper_gives_no_care(self):
         esi = self.e.player("Esi")
         seat(self.gov, "Spirit Keeper", esi)
-        self.e.last_worked["Esi"] = self.e.clock - 10 ** 7  # has not worked in ages
+        self.e.production.last_worked["Esi"] = self.e.clock - 10 ** 7  # has not worked in ages
         self.assertEqual(society.compute_qualities(self.gov)["care"]["detail"]["supply"], 0)
 
     def test_warriors_on_patrol_raise_safety(self):
         self.gov.innovation_pool.discovered.update({"Toolmaking"})
         self.e.possessions.deliver([{"item": "wooden_spear", "count": 2}])
         bob, cleo = self.give_job("Bob", "Warrior"), self.e.player("Cleo")
-        self.e.last_worked["Bob"] = self.e.clock
+        self.e.production.last_worked["Bob"] = self.e.clock
         safety_before = society.compute_qualities(self.gov)["safety"]["value"]
         before = factor("safety", cleo, self.gov, key="working_now:Warrior")
         self.start("Bob", "patrol")
@@ -272,7 +272,7 @@ class FoodShortageTest(Base):
         from controllers.npc import NPCController
         bob = self.give_job("Bob", "Gatherer")
         bob.needs["food"] = 5  # starving, with nothing in the pack to eat
-        self.e.last_worked["Bob"] = self.e.clock  # no "hasn't worked in a while" pull
+        self.e.production.last_worked["Bob"] = self.e.clock  # no "hasn't worked in a while" pull
         bob = become_actor(self.e, "Bob")
         bob.needs.update({"food": 5, "energy": 90})  # starving but not tired: no reason to sleep instead
         # (Queuing research takes a moment and may come first; this is about food work against everything else.)
@@ -287,7 +287,7 @@ class FoodShortageTest(Base):
     def test_food_quality_follows_what_the_tribe_holds(self):
         for name in ("Bob", "Cleo", "Dmitri", "Esi"):
             self.give_job(name, "Gatherer")
-            self.e.last_worked[name] = self.e.clock
+            self.e.production.last_worked[name] = self.e.clock
         for p in self.e.players:
             p.inventory.load([])
         self.e.possessions.ground.clear()
@@ -314,7 +314,7 @@ class WaterTest(Base):
         for name in ("Bob", "Cleo", "Dmitri", "Esi", "Farid", "Greta", "Hiro", "Imani", "Joao", "Kalani", "Leila"):
             # more than enough fetching water
             self.give_job(name, "Gatherer")
-            self.e.last_worked[name] = self.e.clock
+            self.e.production.last_worked[name] = self.e.clock
         self.e.possessions.deliver([{"item": "water", "count": 600}])  # and the store overflowing
         water = society.compute_qualities(self.gov)["water"]
         d = water["detail"]
@@ -326,7 +326,7 @@ class WaterTest(Base):
     def test_an_idle_fisher_brings_no_fish_to_the_table(self):
         self.gov.innovation_pool.discovered.update({"Toolmaking", "Fishing"})
         self.give_job("Bob", "Fisher")  # no spear: never fished
-        self.e.last_worked["Bob"] = -10 ** 9
+        self.e.production.last_worked["Bob"] = -10 ** 9
         food = society.compute_qualities(self.gov)["food"]
         self.assertNotIn("fish", food["detail"]["categories"])
 
@@ -418,7 +418,7 @@ class FairLeadershipTest(Base):
         self.e._live_one_day()
         self.assertGreater(cleo.skills["leadership"], trained)  # working the office: daily practice too
         idle = cleo.skills["leadership"]
-        self.e.last_worked["Cleo"] = -10 ** 9  # long since worked the office
+        self.e.production.last_worked["Cleo"] = -10 ** 9  # long since worked the office
         for p in self.e.players:
             p.satisfaction["society"] = 10
         self.e._live_one_day()
@@ -427,9 +427,9 @@ class FairLeadershipTest(Base):
     def test_fetching_water_is_not_working_your_job(self):
         cleo = self.e.player("Cleo")
         seat(self.gov, "Clan Leader", cleo)
-        self.e.last_worked.pop("Cleo", None)
+        self.e.production.last_worked.pop("Cleo", None)
         self.e._event_work_done({"player": "Cleo", "kind": "work", "key": "fetch_water"})
-        self.assertNotIn("Cleo", self.e.last_worked)
+        self.assertNotIn("Cleo", self.e.production.last_worked)
 
     def test_ability_is_explained(self):
         cleo = self.e.player("Cleo")
@@ -477,4 +477,5 @@ class HungerAndStoreTest(Base):
                                     {"item": "wood", "count": 7}, {"item": "wooden_spear", "count": 1},
                                     {"item": "hand_axe", "count": 2}, {"item": "herbs", "count": 3}])
         line = {g["label"]: g["count"] for g in camp_line(self.e.observe(self.e.player("Alice")))}
-        self.assertEqual(line, {"wood": 7, "food": 6, "water": 0, "stone": 0, "herbs": 3, "tools": 3})
+        # The groups are the age's (data/ages/tribal/age.json 'store_panel').
+        self.assertEqual(line, {"wood": 7, "food": 6, "water": 0, "minerals": 0, "medicine": 3, "tools": 3})

@@ -1,9 +1,10 @@
-"""Government types, loaded from data/governments/*.json. See data/README.md for the format."""
+"""Government types, loaded from data/ages/<age>/governments/*.json. See data/README.md for the format."""
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
 from innovations.innovation import ALL_INNOVATIONS, AGES, AGES_BY_KEY, INTERFACE_ICONS, reached_age_index
-from utils.data_files import json_files, load_json, require
+from utils import game_data
+from utils.data_files import require
 
 SELECTION_METHODS = {"tribe_vote", "council_vote", "appointment", "divine_sign", "seniority"}
 REMOVAL_METHODS = {"tribe_vote", "council_vote", "appointment", "none"}
@@ -39,12 +40,14 @@ class Office:
     points: int = 0
     requires: List[str] = field(default_factory=list)
     description: str = ""
-    # Other ways to take the office (see data/contests.json): {"persuasion": True, "challenge": ["fight", ...]}
+    # Other ways to take the office (see data/rules/contests.json): {"persuasion": True, "challenge": ["fight", ...]}
     contested_by: Dict[str, Any] = field(default_factory=dict)
-    # How well a holder does the job (see data/society.json): {"attributes": {...}, "skill": "..."}; {} = default
+    # How well a holder does the job (see data/rules/society.json): {"attributes": {...}, "skill": "..."}; {} = default
     quality: Dict[str, Any] = field(default_factory=dict)
     rank: Optional[float] = None  # place in the hierarchy of work; None = from points (society.json 'job_rank')
     authority: Optional[float] = None  # place in the hierarchy of appointments; None = its points
+    contributes: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # society quality -> what a holder adds
+    speeds_contentment: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # meter -> curve while working
 
     @property
     def persuadable(self) -> bool:
@@ -79,6 +82,7 @@ class GovernmentType:
     member_interfaces: List[str] = field(default_factory=list)
     member_points: int = 0
     carry_over: Dict[str, str] = field(default_factory=dict)
+    terms: Dict[str, str] = field(default_factory=dict)  # its own words for things (else the age's, age.json)
 
     @property
     def age_name(self) -> str:
@@ -118,7 +122,7 @@ def _check_method(spec: Any, allowed: Set[str], offices: Dict[str, Any], where: 
 
 
 def _check_contested(spec: Any, where: str) -> Dict[str, Any]:
-    from core.contests import CHALLENGE_KINDS
+    from core.contests import KNOWN_CHALLENGE_KINDS as CHALLENGE_KINDS  # the kinds of every age
     require(isinstance(spec, dict), where, "'contested_by' must be an object")
     unknown = set(spec) - {"persuasion", "challenge"}
     require(not unknown, where, f"'contested_by' has unknown keys {sorted(unknown)} (use persuasion, challenge)")
@@ -142,6 +146,11 @@ def _parse(data: Dict[str, Any], file: str) -> GovernmentType:
     for key in ("key", "name", "age", "offices"):
         require(key in data, file, f"missing '{key}'")
     require(data["age"] in AGES_BY_KEY, file, f"'age' must be one of {list(AGES_BY_KEY)}")
+    require(isinstance(data.get("terms", {}), dict), file, "'terms' must be an object of words (see age.json 'terms')")
+    for word in game_data.public(data.get("terms", {})):
+        require(word in game_data.DEFAULT_TERMS, f"{file} terms",
+                f"unknown term '{word}' (known: {', '.join(game_data.DEFAULT_TERMS)})")
+    game_data.register_government_rules(data["key"], data.get("rules", {}), file)
     _check_innovations(data.get("requires", []), f"{file} requires")
     _check_interfaces(data.get("member_interfaces", []), f"{file} member_interfaces")
 
@@ -168,6 +177,8 @@ def _parse(data: Dict[str, Any], file: str) -> GovernmentType:
             quality=o.get("quality", {}),
             rank=o.get("rank"),
             authority=o.get("authority"),
+            contributes={k: dict(v) for k, v in game_data.public(o.get("contributes", {})).items()},
+            speeds_contentment={k: dict(v) for k, v in game_data.public(o.get("speeds_contentment", {})).items()},
         )
 
     statuses: Dict[str, Status] = {}
@@ -197,21 +208,24 @@ def _parse(data: Dict[str, Any], file: str) -> GovernmentType:
         description=data.get("description", ""), requires=data.get("requires", []), reformed_by=reformed_by,
         max_offices_per_player=data.get("max_offices_per_player", 1),
         member_interfaces=data.get("member_interfaces", []), member_points=data.get("member_points", 0),
-        carry_over=data.get("carry_over", {}),
+        carry_over=data.get("carry_over", {}), terms=dict(game_data.public(data.get("terms", {}))),
     )
 
 
 def _load() -> Dict[str, GovernmentType]:
     types: Dict[str, GovernmentType] = {}
-    for path in json_files("governments"):
-        gov = _parse(load_json(path), path.name)
-        require(gov.key not in types, path.name, f"duplicate government key '{gov.key}'")
+    for folder, where, data in game_data.age_folder_files("governments"):
+        # A government belongs to the age whose folder it is in.
+        require(data.get("age", folder.key) == folder.key, where,
+                f"'age' says '{data.get('age')}' but the file is in the {folder.key} folder (leave 'age' out)")
+        gov = _parse({**data, "age": folder.key}, where)
+        require(gov.key not in types, where, f"duplicate government key '{gov.key}'")
         types[gov.key] = gov
     require(any(g.age == AGES[0].key for g in types.values()), "governments",
             f"at least one government must belong to the first age ('{AGES[0].key}')")
     for age in AGES:
         for key in age.government_on_arrival:
-            require(key in types and types[key].age == age.key, f"ages.json '{age.key}' government_on_arrival",
+            require(key in types and types[key].age == age.key, f"ages/{age.key}/age.json government_on_arrival",
                     f"'{key}' is not a government of the {age.name}")
     all_offices = {name for g in types.values() for name in g.offices}
     for g in types.values():
@@ -240,6 +254,8 @@ def _check_occupations():
     check_against_governments(GOVERNMENT_TYPES)
     from core.work import check_against_governments as check_work
     check_work(GOVERNMENT_TYPES)
+    from core import society
+    society.register_offices(GOVERNMENT_TYPES)
 
 
 _check_occupations()

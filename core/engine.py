@@ -36,6 +36,8 @@ from core.contests import CHALLENGE, CHALLENGE_KINDS, DURING_CONTEST, PERSUASION
 from core import society
 from core.possessions import QUICK_ACTIONS, Possessions
 from core import work as WORK
+from core.production import Production
+from utils import game_data
 from core.life import Life
 from world.items import ITEMS, describe
 from world import environment
@@ -61,32 +63,32 @@ class GameEngine:
             self.government.add_player(player)
         self.government.initialize()
         initialize_interfaces(self.government)
+        # The rules in force: those of every age reached and of the government (utils/game_data.py RuleSet).
+        self.rules = game_data.RuleSet(self.government.age_keys(), self.government.government_type.key)
+        self.rules.use()
         self.contests = ContestManager(self.game_state)  # persuasion and challenges for offices
         self.game_state.contests = self.contests
         self.qualities: Dict[str, Dict[str, Any]] = {}  # society qualities, recomputed daily (core/society.py)
         society.init_satisfaction(self.players)
         self.possessions = Possessions(self)  # inventories in use, the camp store, trade offers
-        self.fire_until: int = 0  # the communal fire burns until then (core/work.py: the Firekeeper feeds it wood)
-        self.last_worked: Dict[str, int] = {p.name: 0 for p in self.players}  # when each last finished some work
         self.meals: Dict[str, float] = {}  # name -> how full a meal they are eating (share of a full meal)
         self.aside_checked: Dict[str, int] = {}  # when each busy NPC last considered politics on the side
         self.aside_looked: Dict[str, int] = {}
         self.talk_free_at: Dict[str, int] = {}   # a talk done on the side: no other talk until then
         self.talk_what: Dict[str, str] = {}      # what that talk is ('winning over Bob')   # when it was last seen whether anything waits on them
-        # Good places Scouts found (or gardeners made), oldest first: {'id', 'kind', 'by', 'loads', 'total',
-        # 'found', 'until'}; and the last few used up or lost, for the Found places panel (work.json 'sites').
-        self.sites: List[Dict[str, Any]] = []
-        self.spent_sites: List[Dict[str, Any]] = []
-        self.next_site_id = 1
+        # The work of the age: tasks, recipes, tools, places found, the fire (core/production.py; what the work
+        # is comes from the age folders, data/ages/<age>/).
+        self.production = Production(self)
         self.government.tools_available = lambda tools, player: self.possessions.find_tool(player, tools) is not None
-        self.government.work_activity = self.work_activity
-        self.government.working_now = self.working_now
-        self.government.job_tools = self.job_tools
-        self.government.fire_state = self.fire_state
+        self.government.work_activity = self.production.work_activity
+        self.government.working_now = self.production.working_now
+        self.government.job_tools = self.production.job_tools
+        self.government.fire_state = self.production.fire_state
+        self.government.on_rules_change = self.refresh_rules
         self.government.supply_of = self.possessions.supply
         self.government.on_job_loss = self._job_loss
         self.government.on_job_change = self._job_change
-        self.life = Life(self)  # illness, healing, death, birth and childhood (core/life.py, data/life.json)
+        self.life = Life(self)  # illness, healing, death, birth and childhood (core/life.py, data/rules/life.json)
         self.government.of_age = self.life.of_age
         self.government.sick_count = lambda: sum(1 for p in self.players if p.illness)
         self.quality_levels: Dict[str, float] = {}  # society.json style 'use' qualities (Fire): raised by use
@@ -128,9 +130,44 @@ class GameEngine:
         Messages.add(f"Players: {', '.join(p.name for p in self.players)}")
         Messages.add(f"-- {format_date(self.clock)} - {self.government.age.name} --", header=True)
         self.schedule(HOURS_PER_DAY, "day")
-        self.fire_until = self.clock + environment.life_hours_to_calendar(WORK.FIRE.get("start_life_hours", 8))
+        self.production.start()
         self._settle()
         self.started = True
+
+    def refresh_rules(self):
+        """Work out the rules in force for the ages this society has reached and its government (data/rules,
+        each age's rules/ folder, the government's 'rules'), and use them. Called at the start, after loading,
+        and whenever the age or the government changes."""
+        gov = self.government
+        self.rules = game_data.RuleSet(gov.age_keys(), gov.government_type.key)
+        self.rules.use()
+        society.init_satisfaction(self.players)  # an age may bring a new contentment meter: everyone gets it
+
+    def terms(self) -> Dict[str, str]:
+        """What this age and government call things ('tribe', 'camp store'...): age.json and government 'terms'."""
+        return game_data.terms(self.government.age_keys(), self.government.government_type.terms)
+
+    # The work of the age is core/production.py's; these keep the engine's interface to it in one place.
+    def work_problem(self, player: Player, kind: str, key: str) -> Optional[str]:
+        return self.production.work_problem(player, kind, key)
+
+    def work_options(self, player: Player) -> List[Tuple[str, str, str]]:
+        return self.production.work_options(player)
+
+    def work_quality(self, player: Player, t) -> float:
+        return self.production.work_quality(player, t)
+
+    def work_activity(self, name: str) -> float:
+        return self.production.work_activity(name)
+
+    def working_now(self, name: str) -> Optional[str]:
+        return self.production.working_now(name)
+
+    def fire_state(self) -> str:
+        return self.production.fire_state()
+
+    def fire_hours_left(self) -> float:
+        return self.production.fire_hours_left()
 
     # ------------------------------------------------------------------ #
     # Time
@@ -165,6 +202,7 @@ class GameEngine:
     def step(self) -> Optional[Player]:
         """Move time to the next thing that happens. Process due events and return None, or return
         the player who is now free to act (they stay the actor until they apply an action)."""
+        self.rules.use()
         if self.acting:
             return self.acting
         actor = self.next_actor()
@@ -193,6 +231,7 @@ class GameEngine:
     def act_now(self, player: Player, action: Action, reason: Optional[str] = None) -> bool:
         """A parked real-time player acts at the current moment. If the action fails they stay free.
         A busy player may only 'stop' (wake up, get up) and handle items (quick actions)."""
+        self.rules.use()
         if action.type == "stop":
             return self.interrupt(player)
         if action.type in QUICK_ACTIONS:
@@ -268,7 +307,7 @@ class GameEngine:
 
     def _event_day(self, data):
         gov = self.government
-        self._expire_sites()
+        self.production.daily()
         self._live_one_day()
         self.life.daily()  # births, birthdays, falling ill, pregnancies
         self.contests.tick(environment.life_days(HOURS_PER_DAY))
@@ -297,15 +336,11 @@ class GameEngine:
                 for h in holders:
                     skill = h.skills.get(occ.skill, 0) if occ.skill else 0
                     have[amenity] = max(have.get(amenity, 0), skill)
-        if self.clock < self.fire_until:
+        if self.clock < self.production.fire_until:
             have.setdefault("fire", 0.0)  # it still burns, even with nobody tending it
         else:
             have.pop("fire", None)
         return have
-
-    def fire_hours_left(self) -> float:
-        """Day-night hours the fire will still burn without more wood."""
-        return max(0, self.fire_until - self.clock) / environment.HOURS_PER_LIFE_HOUR
 
     def roll_characters(self, rng: Optional[random.Random] = None):
         """A new game: everyone's attributes are rolled with dice, and skills start at 0 except those of
@@ -361,52 +396,6 @@ class GameEngine:
             what = "being dismissed as" if how == "dismissed" else "being taken off the work of"
             Messages.add(f"{player.name} resents {what} {job} ("
                          + ", ".join(f"{k} -{v:g}" for k, v in hit.items()) + ")")
-
-    def work_activity(self, name: str) -> float:
-        """1 while someone has worked recently, fading to 0: a job held but not worked stops counting."""
-        window = environment.life_hours_to_calendar(WORK.WORK_COUNTS_LIFE_HOURS)
-        since = self.clock - self.last_worked.get(name, 0)
-        if since <= window:
-            return 1.0
-        fade = environment.life_hours_to_calendar(WORK.WORK_FADES_LIFE_HOURS)
-        return max(0.0, 1 - (since - window) / max(1, fade))
-
-    def working_now(self, name: str) -> Optional[str]:
-        """The job whose work this person is doing right now ('Hunter', 'office:Elder'), or None: they are
-        not working, or what they are doing isn't their job's work (fetching water, say)."""
-        p = self.player(name)
-        last = self.last_action.get(name)
-        if p is not None and last and last["type"] == "activity" and self.free_at.get(name, 0) > self.clock:
-            return "childhood"
-        if p is not None and last and last["type"] == "heal" and self.free_at.get(name, 0) > self.clock:
-            return next((o for o in self.government.occupations_of(p)
-                         if o in self.life.rules.get("treatment", {}).get("healers", [])), None)  # a child's play and study is their work (life.json 'childhood')
-        if p is None or not last or last["type"] not in ("work", "craft") or self.free_at.get(name, 0) <= self.clock:
-            return None
-        t = WORK.work(last["type"], last["params"].get("task") or last["params"].get("recipe"))
-        gov = self.government
-        return WORK.job_for(t, gov.occupations_of(p), gov.offices_of(p)) if t else None
-
-    def job_tools(self, player: Player) -> Tuple[int, bool]:
-        """(how many different tools for their job the player carries, whether any such tool exists yet:
-        one can be made with what the tribe has researched, or someone has one)."""
-        tools = {x for job in self.government.jobs_of(player) for x in WORK.tools_for_job(job)}
-        if not tools:
-            return 0, False
-        have = sum(1 for x in tools if player.inventory.count(x))
-        invented = have > 0 or any(
-            any(self.government.is_unlocked(r.requires) for r in WORK.recipes_making(x))
-            or self.possessions.ground.get(x, 0) or any(q.inventory.count(x) for q in self.players)
-            for x in tools)
-        return have, bool(invented)
-
-    def fire_state(self) -> str:
-        """'tended' (burning, and a Firekeeper has worked lately), 'untended' (burning) or 'out'."""
-        if self.clock >= self.fire_until:
-            return "out"
-        keepers = [p for name, holders in self.government.occupations.items() if "fire" in OCCUPATIONS[name].provides
-                   for p in holders]
-        return "tended" if any(self.work_activity(p.name) >= 1.0 for p in keepers) else "untended"
 
     def fire_temperature(self) -> Optional[float]:
         have = self.amenities()
@@ -518,7 +507,7 @@ class GameEngine:
         for key, points in society.event_points(event).items():
             self.quality_shocks[key] = self.quality_shocks.get(key, 0.0) + points
             q = society.QUALITIES[key]
-            Messages.add(f"{q.icon} The tribe's {q.name.lower()} {'falls' if points < 0 else 'rises'} by "
+            Messages.add(f"{q.icon} The {self.terms()['society']}'s {q.name.lower()} {'falls' if points < 0 else 'rises'} by "
                          f"{abs(points):g} ({event})", reason=event)
         self.qualities = society.compute_qualities(self.government)
 
@@ -567,7 +556,7 @@ class GameEngine:
         self.government.add_player(p)
         society.init_satisfaction([p])
         self.free_at[p.name] = self.clock
-        self.last_worked[p.name] = 0
+        self.production.add_person(p.name)
 
     def remove_person(self, p: Player):
         """Someone has died (core/life.py): they leave every office and job, every ballot and contest; what they
@@ -581,7 +570,8 @@ class GameEngine:
         self.life.release_bodies(p.name)
         if p in self.players:
             self.players.remove(p)
-        for table in (self.free_at, self.last_worked, self.last_action, self.last_deeds, self.meals,
+        self.production.forget(p.name)
+        for table in (self.free_at, self.last_action, self.last_deeds, self.meals,
                       self.aside_checked, self.aside_looked, self.talk_free_at, self.talk_what):
             table.pop(p.name, None)
         self.idle.discard(p.name)
@@ -667,6 +657,7 @@ class GameEngine:
         return True
 
     def legal_actions(self, player: Player) -> List[Action]:
+        self.rules.use()
         if not self.is_free(player):
             acts = [Action("stop", {}, "Stop and get up", "")] if self.can_interrupt(player) else []
             return acts + self.aside_actions(player)
@@ -835,300 +826,21 @@ class GameEngine:
         wanted = min(care.restores[need], 100 - player.needs.get(need, 100))
         return self.possessions.pick_meal(player, need, max(wanted, 1))
 
-    def work_problem(self, player: Player, kind: str, key: str) -> Optional[str]:
-        """Why the player can't do this work now ('needs a spear'), or None if they can."""
-        t = WORK.work(kind, key)
-        gov = self.government
-        if t is None:
-            return "no such work"
-        why = self.life.cannot_work(player)
-        if why:
-            return why
-        if t.scouts_for and t.scouts_for not in self.useful_site_kinds():
-            return f"nobody could use {WORK.SITE_KINDS[t.scouts_for]['name']} yet"
-        if t.disposes_of_dead and self.life.unclaimed_body() is None:
-            return "nobody lies dead in camp" if not self.life.bodies else "someone is already seeing to the dead"
-        if not t.open_to_anyone and WORK.job_for(t, gov.occupations_of(player), gov.offices_of(player)) is None:
-            if t.any_office and not t.occupations and not t.offices:
-                return "only someone holding an office does this"
-            return f"only a {' or '.join(t.occupations + t.offices)} does this"
-        if not gov.is_unlocked(t.requires):
-            return f"needs {', '.join(r for r in t.requires if not gov.is_unlocked([r]))}"
-        if t.tools and self.possessions.find_tool(player, t.tools) is None:
-            return f"needs a {' or '.join(ITEMS[x].name for x in t.tools)}"
-        if t.tools and self._tool_for(player, t) is None:
-            tool = self.possessions.find_tool(player, t.tools)
-            return f"needs {describe(self._tool_consumes(t, tool))}"
-        if not self.possessions.has_all(player, t.consumes):
-            return f"needs {describe(t.consumes)}"
-        if t.fire_life_hours and self.fire_hours_left() >= WORK.FIRE.get("max_life_hours", 14) - 0.5:
-            return "the fire has all the wood it can take"
-        return None
-
-    def work_options(self, player: Player) -> List[Tuple[str, str, str]]:
-        """(kind, key, label) for every task and recipe the player can do now."""
-        out = []
-        for kind, table in (("work", WORK.TASKS), ("craft", WORK.RECIPES)):
-            for key, t in table.items():
-                if self.work_problem(player, kind, key) is None:
-                    out.append((kind, key, t.label))
-        return out
-
-    def work_quality(self, player: Player, t) -> float:
-        """How well the player does this work (0-100): as in their job, or by skill for anyone's tasks."""
-        gov = self.government
-        job = WORK.job_for(t, gov.occupations_of(player), gov.offices_of(player))
-        if job:
-            return society.job_quality(gov, job, player)
-        from core.society import work_quality
-        return work_quality(player, WORK.ANYONE_ATTRIBUTES, t.skill)
-
     def _do_work(self, player, params, reason) -> bool:
-        return self._start_work(player, "work", params["task"], reason)
+        return self.production.start_work(player, "work", params["task"], reason)
 
     def _do_craft(self, player, params, reason) -> bool:
-        return self._start_work(player, "craft", params["recipe"], reason)
-
-    def _start_work(self, player, kind: str, key: str, reason) -> bool:
-        why = self.work_problem(player, kind, key)
-        if why:
-            Messages.add(f"{player.name} can't do that: {why}.", important=False)
-            return False
-        t = WORK.work(kind, key)
-        tool = self._tool_for(player, t) if t.tools else None
-        if tool and not self.possessions.take_tool(player, tool):
-            Messages.add(f"{player.name} has no room in their pack for the {ITEMS[tool].name}.", important=False)
-            return False
-        if t.consumes and not self.possessions.consume(player, t.consumes):
-            return False
-        ammo = self.possessions.consume_used(player, self._tool_consumes(t, tool)) if tool else []
-        if ammo is None:
-            return False
-        body = self.life.reserve_body(player) if t.disposes_of_dead else None
-        boost = next((b for b in t.boost if self.possessions.find_tool(player, [b])), None)
-        speed = self._speed_tool(player, t)
-        if speed and speed != tool:
-            self.possessions.take_tool(player, speed)  # fetched from the store, if it isn't in the pack already
-        self.schedule(self.clock + self.duration(Action(kind, {"task" if kind == "work" else "recipe": key}), player),
-                      "work_done", {"player": player.name, "kind": kind, "key": key, "tool": tool, "boost": boost,
-                                    "ammo": [a["item"] for a in ammo], "speed_tool": speed if speed != tool else None,
-                                    "body": body})
-        what = t.label[0].lower() + t.label[1:]
-        with_ = f" with a {ITEMS[tool].name.lower()}" if tool else ""
-        Messages.add(f"{player.name} sets out to {what}{with_}" if not t.recipe else f"{player.name} sets to work: {what}",
-                     important=False, reason=reason, category="life")
-        return True
-
-    @staticmethod
-    def _tool_consumes(t, tool: Optional[str]) -> List[Dict[str, Any]]:
-        """What working with this tool uses up (a bow: an arrow); a better tool standing in for a lesser one
-        (items.json 'counts_as') uses what the lesser one would, unless the task names it itself."""
-        for key in [tool, *ITEMS[tool].counts_as] if tool else []:
-            if key in t.tool_consumes:
-                return t.tool_consumes[key]
-        return []
-
-    @staticmethod
-    def _tool_yield(t, item: Optional[str]) -> float:
-        """The task's 'tool_yields' multiplier for this tool or ammunition (or what it stands in for)."""
-        for key in [item, *ITEMS[item].counts_as] if item else []:
-            if key in t.tool_yields:
-                return t.tool_yields[key]
-        return 1.0
-
-    def _tool_for(self, player: Player, t) -> Optional[str]:
-        """The tool this player would work with: the first of the task's tools they can lay hands on whose
-        ammunition is there too (a bow is no use without arrows)."""
-        return self.possessions.find_tool(player, t.tools, lambda tool: self.possessions.has_all(
-            player, self._tool_consumes(t, tool)))
-
-    def _office_skill_of(self, p: Player, t) -> Optional[str]:
-        """Office work with no skill of its own (holding council, office duties) practises the office's
-        skill (the office's 'quality' in data/governments, e.g. Clan Leader: leadership)."""
-        job = WORK.job_for(t, self.government.occupations_of(p), self.government.offices_of(p))
-        return society.office_spec(self.government, job[7:]).get("skill") if job and job.startswith("office:") else None
+        return self.production.start_work(player, "craft", params["recipe"], reason)
 
     def _event_work_done(self, data):
-        p = self.player(data["player"])
-        t = WORK.work(data["kind"], data["key"])
-        if p is None or t is None:
-            return
-        quality = self.work_quality(p, t)
-        mult = self._tool_yield(t, data.get("tool"))
-        for item in data.get("ammo", []):  # better ammunition (flint arrows) does better
-            mult *= self._tool_yield(t, item)
-        if data.get("boost"):
-            mult *= t.boost.get(data["boost"], 1.0)
-        site = self.site_of(t.site) if t.site else None
-        lucky = random.random() < WORK.trip_chance(t, quality, site is not None)
-        took = 0.0
-        if site is not None and lucky:  # the trip goes to a place a Scout found and takes a big share of what is there
-            took = min(site["loads"], WORK.SITES.get("take_per_trip", 2.0))
-            if site["loads"] - took < WORK.SITES.get("least_left", 0.3):
-                took = site["loads"]
-            site["loads"] = round(site["loads"] - took, 2)
-            mult *= took
-        got = WORK.roll_yields(t, quality, mult) if lucky else []
-        kept, shared = self.possessions.bring_back(p, got)
-        if t.scouts_for:
-            self._scout_for_sites(p, t.scouts_for, quality)
-        if t.makes_sites:
-            self._make_site(p, t)
-        own_job = WORK.job_for(t, self.government.occupations_of(p), self.government.offices_of(p)) is not None
-        if own_job:
-            self.last_worked[p.name] = self.clock  # only their own job's work counts as working (not fetching water)
-        skill = t.skill or self._office_skill_of(p, t)
-        if skill:
-            practice = CHARACTER.training_per_year / DAYS_PER_YEAR * WORK.PRACTICE_DAYS_PER_TASK
-            p.train(skill, practice)
-        if t.disposes_of_dead:
-            self.life.dispose(data.get("body"), p, t)
-        elif t.fire_life_hours:
-            most = self.clock + environment.life_hours_to_calendar(WORK.FIRE.get("max_life_hours", 14))
-            self.fire_until = min(most, max(self.fire_until, self.clock)
-                                  + environment.life_hours_to_calendar(t.fire_life_hours * (WORK.FIRE.get("feed_at_quality_0", 0.7) + (WORK.FIRE.get("feed_at_quality_100", 1.29)
-                                                           - WORK.FIRE.get("feed_at_quality_0", 0.7)) * quality / 100)))
-            Messages.add(f"{p.name} feeds the fire (it will burn {environment.format_life_duration(self.fire_until - self.clock)})",
-                         important=False, category="life")
-        elif got:
-            where = ("keeps it all" if not shared else "puts it all in the camp store" if not kept else
-                     f"keeps {describe(kept)}, the rest to the camp store")
-            source = f" from the {WORK.SITE_KINDS[t.site]['short']} {site['by']} found" if site else ""
-            Messages.add((f"{p.name} brings back {describe(got)}{source}" if not t.recipe else
-                          f"{p.name} makes {describe(got)}") + f" and {where}", important=False, category="life")
-        elif t.scouts_for:
-            pass  # _scout_for_sites told the chronicle what was found
-        elif t.yields:
-            why = "" if not t.site or site else \
-                f" (nobody knows of {WORK.SITE_KINDS[t.site]['name']}: a Scout could find some)"
-            Messages.add(f"{p.name} comes back empty-handed{why}", important=False, category="life")
-        else:
-            Messages.add(f"{p.name} finishes: {t.label.lower()}", important=False, category="life")
-        if took and site["loads"] <= 0:
-            self._spend_site(site, "used up")
-            Messages.add(f"{p.name} has taken the last of the {WORK.SITE_KINDS[t.site]['short']} {site['by']} found"
-                         + ("; the next trip goes to the next place found" if self.site_of(t.site) else
-                            "; a Scout must find more"), category="find")
-        elif took:
-            Messages.add(f"About {site['loads']:g} trips' worth is left at the {WORK.SITE_KINDS[t.site]['short']} "
-                         f"{site['by']} found", important=False)
-        for tool in (data.get("tool"), data.get("speed_tool")):
-            self._use_up_tool(p, tool)
-        self.life.after_work(p, t, own_job)  # hard work wears people down (life.json 'work_chance')
-
-    def _use_up_tool(self, p: Player, tool: Optional[str]):
-        """A tool used for work may break (items.json tool 'breaks') and wears down one use ('uses'): worn
-        all the way down, it breaks for certain. The Toolmaker must make another, and its user fetch it."""
-        if not tool:
-            return
-        name = ITEMS[tool].name.lower()
-        if ITEMS[tool].breaks and random.random() < ITEMS[tool].breaks:
-            self.possessions.break_tool(p, tool)
-            Messages.add(f"{p.name}'s {name} breaks", important=False, category="life")
-        elif self.possessions.wear_tool(p, tool):
-            Messages.add(f"{p.name}'s {name} is worn out and falls apart", important=False, category="life")
-
-    # ------------------------------------------------------------------ #
-    # Sites: good places a Scout finds, where trips succeed far more often
-    # ------------------------------------------------------------------ #
-    def site_of(self, kind: str) -> Optional[Dict[str, Any]]:
-        """The place of this kind trips go to now: the oldest found that still has something left."""
-        return next((x for x in self.sites if x["kind"] == kind and x["loads"] > 0 and x["until"] > self.clock), None)
-
-    def site_known(self, kind: str) -> bool:
-        return self.site_of(kind) is not None
-
-    def useful_site_kinds(self) -> List[str]:
-        """Site kinds someone could make use of now: a task of that kind is unlocked and someone may do it
-        (it is open to anyone, or one of its jobs is unlocked)."""
-        gov = self.government
-        out = []
-        for kind in WORK.SITE_KINDS:
-            for t in WORK.site_tasks(kind):
-                jobs_open = not t.occupations or any(o in OCCUPATIONS and gov.is_unlocked(OCCUPATIONS[o].requires)
-                                                     for o in t.occupations)
-                if gov.is_unlocked(t.requires) and jobs_open:
-                    out.append(kind)
-                    break
-        return out
-
-    def _add_site(self, kind: str, by: str, loads: float, life_hours: float) -> Dict[str, Any]:
-        site = {"id": self.next_site_id, "kind": kind, "by": by, "loads": loads, "total": loads,
-                "found": self.clock, "until": self.clock + environment.life_hours_to_calendar(life_hours)}
-        self.next_site_id += 1
-        self.sites.append(site)
-        return site
-
-    def _spend_site(self, site: Dict[str, Any], how: str):
-        """A place is used up (or lost): off the list of places, onto the greyed list of spent ones."""
-        if site in self.sites:
-            self.sites.remove(site)
-        self.spent_sites.append(dict(site, spent=self.clock, how=how))
-        del self.spent_sites[:-max(0, int(WORK.SITES.get("spent_shown", 4))) or len(self.spent_sites)]
-
-    def _scout_for_sites(self, scout: Player, kind: str, quality: float):
-        """A Scout looked for one kind of place (their choice): found with 'sites.find_chance', it holds an
-        abundance of trips' worth for the tribe's Gatherers, Hunters or Fishers (work.json 'sites')."""
-        spec = WORK.SITE_KINDS[kind]
-        if random.random() >= WORK.site_find_chance(quality):
-            Messages.add(f"{scout.name} scouted for {spec['name']} but found none this time", important=False)
-            return
-        site = self._add_site(kind, scout.name, WORK.site_loads(spec.get("loads")), WORK.SITES.get("life_hours", 24))
-        what = " or ".join(t.label.lower() for t in WORK.site_tasks(kind))
-        Messages.add(f"{spec.get('icon', '')} {scout.name} found {spec['name']}! About {site['loads']:g} trips' "
-                     f"worth: trips to {what} will surely pay off until it is used up", category="find")
-
-    def _make_site(self, worker: Player, t):
-        """Work that makes a good place rather than finding one (a Sustenance Gardener's plot): one of the
-        task's 'makes_sites' kinds, by weight, holding 'loads' trips' worth (topping up their own plot)."""
-        kinds = t.makes_sites.get("kinds", {})
-        if not kinds:
-            return
-        kind = random.choices(list(kinds), list(kinds.values()))[0]
-        loads = WORK.site_loads(t.makes_sites.get("loads", 1))
-        until = self.clock + environment.life_hours_to_calendar(t.makes_sites.get("life_hours", 6))
-        mine = next((x for x in self.sites if x["kind"] == kind and x["by"] == worker.name and x["loads"] > 0), None)
-        if mine:
-            mine["loads"] = round(mine["loads"] + loads, 2)
-            mine["total"] = max(mine["total"], mine["loads"])
-            mine["until"] = max(mine["until"], until)
-        else:
-            mine = self._add_site(kind, worker.name, loads, t.makes_sites.get("life_hours", 6))
-        what = " or ".join(x.label.lower() for x in WORK.site_tasks(kind))
-        Messages.add(f"{worker.name} tends {WORK.SITE_KINDS[kind]['name']}: about {mine['loads']:g} trips' worth "
-                     f"to {what}", important=False, category="life")
-
-    def _expire_sites(self):
-        for site in [x for x in self.sites if x["until"] <= self.clock]:
-            self._spend_site(site, "lost")
-            Messages.add(f"Nobody went back to the {WORK.SITE_KINDS[site['kind']]['short']} {site['by']} found in "
-                         f"time: about {site['loads']:g} trips' worth is lost", important=False)
-
-    def site_hours_left(self, site: Dict[str, Any]) -> float:
-        return max(0.0, (site["until"] - self.clock) / environment.HOURS_PER_LIFE_HOUR)
-
-    def _site_view(self, site: Dict[str, Any]) -> Dict[str, Any]:
-        spec = WORK.SITE_KINDS[site["kind"]]
-        return {"id": site["id"], "kind": site["kind"], "name": spec["name"], "short": spec["short"],
-                "icon": spec.get("icon", "•"), "by": site["by"], "loads": site["loads"], "total": site["total"],
-                "hours_left": round(self.site_hours_left(site), 1), "how": site.get("how")}
-
-    def _speed_tool(self, player: Player, t) -> Optional[str]:
-        """The best of the work's 'speed_tools' the player can lay hands on (pack, else camp store)."""
-        for key in sorted(t.speed_tools, key=t.speed_tools.get, reverse=True):
-            if player.inventory.count(key) or self.possessions.ground.get(key, 0):
-                return key
-        return None
+        self.production.finish_work(data)
 
     def duration(self, action: Action, player: Optional[Player] = None) -> int:
         """Game hours the action keeps the player busy. Work goes faster with a speed tool in the pack
         (a Toolmaker with a stone knife)."""
         if action.type in ("work", "craft"):
-            t = WORK.work(action.type, action.params.get("task") or action.params.get("recipe"))
-            hours = t.life_hours if t else 1
-            if t and player is not None and t.speed_tools:
-                held = [x for k, x in t.speed_tools.items() if player.inventory.count(k)]
-                hours /= max(held, default=1.0)
+            hours = self.production.work_hours(action.type, action.params.get("task") or action.params.get("recipe"),
+                                               player)
             return max(1, environment.life_hours_to_calendar(hours))
         if action.type == "wait":
             return int(action.params["days"] * HOURS_PER_DAY)
@@ -1249,7 +961,7 @@ class GameEngine:
             if not meal or not all(player.inventory.take(s["item"], s["count"]) for s in meal):
                 what = next(iter(care.restores))
                 Messages.add(f"Sorry, {player.name} can't {care.label.split()[0].lower()} right now: there is no "
-                             f"{what} in their inventory (take some from the camp store first).", important=False)
+                             f"{what} in their inventory (take some from the {self.terms()['store_name']} first).", important=False)
                 return False
             need = next(iter(care.restores))
             got = sum(ITEMS[s["item"]].use.get(need, 0) * s["count"] for s in meal)
@@ -1354,6 +1066,7 @@ class GameEngine:
     # ------------------------------------------------------------------ #
     def observe(self, player: Player) -> Dict[str, Any]:
         """Everything `player` can see, as plain data (no live objects), so it can be sent anywhere."""
+        self.rules.use()
         gov, vm = self.government, self.voting
         gtype = gov.government_type
         progress = gov.next_age_progress()
@@ -1402,7 +1115,7 @@ class GameEngine:
             "world": environment.observe(self.clock, self.fire_temperature()),
             "activity": (lambda a: a.key if a else None)(self.activity_of(player)),
             "can_stop": self.can_interrupt(player),
-            "crafts": self._observe_crafts(),
+            "crafts": self.production.observe_crafts(),
             "occupations": {
                 o.name: {"icon": o.icon, "description": o.description, "seats": o.seats,
                          "holders": [p.name for p in gov.occupations[o.name]],
@@ -1466,181 +1179,17 @@ class GameEngine:
                  "offices": gov.offices_of(p), "statuses": gov.statuses_of(p), "can_vote": gov.can_vote(p),
                  "busy": not self.is_free(p) and self.free_at[p.name] > self.clock, "doing": self._doing(p),
                  "last_deed": self._last_deed(p), "inventory": p.inventory.observe(),
-                 "waiting_for": self._waiting_for(p)}
+                 "waiting_for": self.production.waiting_for(p)}
                 for p in self.players],
             "ballots": [self._observe_ballot(b, player) for b in vm.active_votes],
             "contests": self.contests.observe(player),
             "in_contest": self._observe_in_contest(player),
             "possessions": self.possessions.observe(player),
-            "camp": self._observe_camp(player),
+            "camp": self.production.observe(player),
+            # What this age and government call things, and what the top bar shows of the shared store.
+            "terms": self.terms(),
+            "store_panel": game_data.inherited("store_panel", gov.age_keys(), []),
         }
-
-    def _observe_camp(self, player: Player) -> Dict[str, Any]:
-        """The fire, the tribe's food and water, and the work this player could do (with why not)."""
-        members = max(1, len(self.players))
-        work = []
-        for kind, table in (("work", WORK.TASKS), ("craft", WORK.RECIPES)):
-            gov = self.government
-            for key, t in table.items():
-                job = WORK.job_for(t, gov.occupations_of(player), gov.offices_of(player))
-                if not t.open_to_anyone and job is None:
-                    continue
-                if not gov.is_unlocked(t.requires) or (t.disposes_of_dead and not self.life.bodies):
-                    continue
-                work.append({"kind": kind, "key": key, "label": t.label, "problem": self.work_problem(player, kind, key),
-                             "own_job": job is not None,
-                             "life_hours": t.life_hours, "tools": list(t.tools), "consumes": t.consumes,
-                             "yields": [dict(y) for y in t.yields], "skill": t.skill,
-                             "quality": round(self.work_quality(player, t), 1), "fire_life_hours": t.fire_life_hours,
-                             "site": t.site, "site_known": bool(t.site and self.site_known(t.site)),
-                             "scouts_for": t.scouts_for,
-                             "find_chance": round(WORK.site_find_chance(self.work_quality(player, t)), 2)
-                             if t.scouts_for else None,
-                             "scout_items": [y["item"] for x in WORK.site_tasks(t.scouts_for) for y in x.yields]
-                             if t.scouts_for else [],
-                             "chance": round(WORK.trip_chance(t, self.work_quality(player, t),
-                                                              bool(t.site and self.site_known(t.site))), 2),
-                             "finds_sites": t.finds_sites, "disposes_of_dead": t.disposes_of_dead,
-                             "illness_risk": t.illness_risk})
-        return {"fire_hours_left": round(self.fire_hours_left(), 2),
-                "fire_max_hours": WORK.FIRE.get("max_life_hours", 14),
-                "food": round(self.possessions.supply("food")), "water": round(self.possessions.supply("water")),
-                "food_per_member": round(self.possessions.supply("food") / members, 1),
-                "store_food_per_member": round(self.possessions.store_supply("food") / members, 1),
-                "store_water_per_member": round(self.possessions.store_supply("water") / members, 1),
-                "water_per_member": round(self.possessions.supply("water") / members, 1),
-                "stock_targets": {k: v for k, v in WORK.STOCK_TARGETS.items() if k in self._wanted_items()},
-                "tools_waited_for": self.possessions.tools_waited_for(),
-                "sites": [self._site_view(x) for x in self.sites if x["loads"] > 0 and x["until"] > self.clock],
-                "spent_sites": [self._site_view(x) for x in reversed(self.spent_sites)],
-                "useful_sites": self.useful_site_kinds(),
-                "work": work, "worked_recently": self.work_activity(player.name) >= 1.0,
-                "work_activity": {p.name: round(self.work_activity(p.name), 2) for p in self.players}}
-
-    def _observe_crafts(self) -> Dict[str, Any]:
-        """The crafting chart (F12): every item the tribe can make or find in this age (and earlier ones),
-        what it takes (work, research, tools, materials), what it is used for, and whether it can be had
-        now. Plain data, so another client can draw the same chart."""
-        from innovations.innovation import ALL_INNOVATIONS
-        gov, store = self.government, self.possessions.ground
-        held = {name: [p.name for p in holders] for name, holders in gov.occupations.items()}
-
-        def needed(t) -> List[str]:
-            """The work's own research, plus a job's when none of the jobs that do it is open yet."""
-            reqs = list(t.requires)
-            jobs = [OCCUPATIONS[o] for o in t.occupations if o in OCCUPATIONS]
-            if jobs and not any(gov.is_unlocked(o.requires) for o in jobs):
-                reqs += [r for r in jobs[0].requires if r not in reqs]
-            return reqs
-
-        def research(t):
-            return [{"name": r, "done": gov.is_unlocked([r])} for r in needed(t)]
-
-        def in_age(t) -> bool:
-            return all(ALL_INNOVATIONS[r].age_index <= gov.age_index for r in needed(t) if r in ALL_INNOVATIONS)
-
-        def workers(t) -> List[str]:
-            if not t.occupations:
-                return [p.name for p in self.players]
-            return [n for o in t.occupations for n in held.get(o, [])]
-
-        def status(t, inputs) -> Tuple[str, str]:
-            missing = [r for r in needed(t) if not gov.is_unlocked([r])]
-            if missing:
-                return "research", f"needs {', '.join(missing)}"
-            if not workers(t):
-                return "no_worker", f"nobody is a {' or '.join(t.occupations)}"
-            if t.tools and not any(store.get(x, 0) or any(p.inventory.count(x) for p in self.players) for x in t.tools):
-                return "no_tool", f"needs a {' or '.join(ITEMS[x].name for x in t.tools)}"
-            short = [s for s in inputs if store.get(s["item"], 0) < s["count"]]
-            if short:
-                return "short", "store short of " + ", ".join(ITEMS[s["item"]].name for s in short)
-            return "ready", "can be made now" if t.recipe else "being found"
-
-        uses: Dict[str, List[str]] = {}
-        used_by: Dict[str, Dict[str, List[str]]] = {}  # item -> job ('everyone' for anyone) -> what for
-
-        def use_by(item: str, t, what: str):
-            for job in (t.occupations or ["everyone"]):
-                whats = used_by.setdefault(item, {}).setdefault(job, [])
-                if what not in whats:
-                    whats.append(what)
-
-        for t in [*WORK.TASKS.values(), *WORK.RECIPES.values()]:
-            if not in_age(t):
-                continue
-            label = t.label[0].lower() + t.label[1:]
-            for x in t.tools:
-                mult = t.tool_yields.get(x, 1.0)
-                use_by(x, t, label + (f" x{mult:g}" if mult != 1.0 else ""))
-            for x, mult in t.boost.items():
-                use_by(x, t, f"{label} x{mult:g}")
-            for x, stacks in t.tool_consumes.items():
-                for st in stacks:
-                    use_by(st["item"], t, f"{label} with a {ITEMS[x].name.lower()}")
-            for st in t.consumes:
-                use_by(st["item"], t, f"to make {ITEMS[t.yields[0]['item']].name.lower()}" if t.recipe else label)
-            for x in t.tools:
-                uses.setdefault(x, []).append(f"tool for: {t.label}")
-            for x, mult in t.boost.items():
-                uses.setdefault(x, []).append(f"{t.label}: {mult:g}x the yield")
-            for x, stacks in t.tool_consumes.items():
-                for st in stacks:
-                    uses.setdefault(st["item"], []).append(f"used up by: {t.label} with a {ITEMS[x].name}")
-            for st in (t.consumes if not t.recipe else []):
-                uses.setdefault(st["item"], []).append(f"used up by: {t.label}")
-            if t.recipe:
-                for st in t.consumes:
-                    uses.setdefault(st["item"], []).append(f"to make: {ITEMS[t.yields[0]['item']].name}")
-        for occ in OCCUPATIONS.values():
-            for x in occ.needs_tools:
-                uses.setdefault(x, []).append(f"a {occ.name} can't work without one")
-        for key, item in ITEMS.items():
-            for need, amount in item.use.items():
-                uses.setdefault(key, []).append(f"{item.use_label.lower()}: +{amount:g} {need}")
-                whats = used_by.setdefault(key, {}).setdefault("everyone", [])
-                what = {"food": "eating", "water": "drinking", "health": "healing"}.get(need, need)
-                if what not in whats:
-                    whats.append(what)
-
-        recipes, sources = [], []
-        for key, t in WORK.RECIPES.items():
-            if not in_age(t):
-                continue
-            out = t.yields[0]
-            inputs = [dict(s) for s in t.consumes]
-            st, why = status(t, inputs)
-            recipes.append({"key": key, "item": out["item"], "count": int(out["amount"]), "occupations": list(t.occupations),
-                            "workers": workers(t), "research": research(t), "inputs": inputs,
-                            "have": {s["item"]: store.get(s["item"], 0) for s in inputs},
-                            "life_hours": t.life_hours, "skill": t.skill, "status": st, "why": why})
-        for key, t in WORK.TASKS.items():
-            if not in_age(t) or not t.yields:
-                continue
-            st, why = status(t, [dict(s) for s in t.consumes])
-            sources.append({"key": key, "label": t.label, "occupations": list(t.occupations), "workers": workers(t),
-                            "research": research(t), "tools": list(t.tools), "consumes": [dict(s) for s in t.consumes],
-                            "yields": [{"item": y["item"], "amount": y["amount"], "chance": y.get("chance", 1.0)}
-                                       for y in t.yields],
-                            "life_hours": t.life_hours, "status": st, "why": why})
-        return {"age": gov.age.name, "recipes": recipes, "sources": sources,
-                "uses": uses, "used_by": used_by, "store": {k: v for k, v in store.items() if v > 0}}
-
-    def _wanted_items(self) -> set:
-        """What the tribe has a use for now: food, water, and whatever an unlocked task or recipe uses or
-        makes (no point stockpiling flint before anyone can knap it)."""
-        gov = self.government
-        wanted = {"food", "water"}
-        for t in [*WORK.TASKS.values(), *WORK.RECIPES.values()]:
-            if not gov.is_unlocked(t.requires):
-                continue
-            wanted.update(s["item"] for s in t.consumes)
-            wanted.update(t.tools)
-            for stacks in t.tool_consumes.values():
-                wanted.update(s["item"] for s in stacks)
-            if t.recipe:
-                wanted.update(y["item"] for y in t.yields)
-        return wanted
 
     def _observe_in_contest(self, player: Player) -> Optional[Dict[str, Any]]:
         """The challenge this player is a contestant in, and what they may still do meanwhile."""
@@ -1657,15 +1206,6 @@ class GameEngine:
             self.qualities = society.compute_qualities(self.government)
         return {"score": society.society_score(self.qualities), "qualities": self.qualities}
 
-    def _waiting_for(self, player: Player) -> Optional[str]:
-        """'a Wooden Spear' when every piece of this player's job work needs a tool there is none of (they
-        were appointed before one was made, or it broke), else None."""
-        gov = self.government
-        tasks = [t for job in gov.jobs_of(player) for t in WORK.tasks_of_job(job) if gov.is_unlocked(t.requires)]
-        if not tasks or any(not t.tools or self.possessions.find_tool(player, t.tools) for t in tasks):
-            return None
-        return "a " + " or ".join(dict.fromkeys(ITEMS[k].name for t in tasks for k in t.tools))
-
     def _doing(self, player: Player) -> Optional[str]:
         """What the player is busy with ('voting', 'researching Fire Making'), or None if free."""
         if self.is_free(player) or self.free_at[player.name] <= self.clock:
@@ -1681,8 +1221,7 @@ class GameEngine:
                  "decline_nomination": "declining a nomination", "treat": "being tended by the healer",
                  "heal": "healing"}
         if last["type"] in ("work", "craft"):
-            t = WORK.work(last["type"], last["params"].get("task") or last["params"].get("recipe"))
-            return (t.label[0].lower() + t.label[1:]) if t else "working"
+            return self.production.doing(last["type"], last["params"])
         if last["type"] == "activity":
             a = self.life.activity(last["params"].get("activity", "")) or {"label": "playing"}
             return a["label"][0].lower() + a["label"][1:]
@@ -1768,14 +1307,10 @@ class GameEngine:
             "resting": sorted(self.resting),
             "ballot_stages": sorted([list(x) for x in self._ballot_stages]),
             "possessions": self.possessions.to_dict(),
-            "fire_until": self.fire_until,
+            "production": self.production.to_dict(),
             "quality_levels": dict(self.quality_levels),
             "quality_shocks": dict(self.quality_shocks),
-            "last_worked": dict(self.last_worked),
             "meals": dict(self.meals),
-            "sites": [dict(x) for x in self.sites],
-            "spent_sites": [dict(x) for x in self.spent_sites],
-            "next_site_id": self.next_site_id,
             "aside_checked": dict(self.aside_checked),
             "aside_looked": dict(self.aside_looked),
             "talk_free_at": dict(self.talk_free_at),
@@ -1804,15 +1339,13 @@ class GameEngine:
         for p in engine.players:
             p.load_character_state(data.get("characters", {}).get(p.name, {}))
         engine.government.load_state(data["government"], engine.player)
+        engine.refresh_rules()  # the saved game's age and government, not a new game's
         engine.voting.load_state(data["voting"], engine.player)
         engine.contests.load_state(data.get("contests", {}))
         engine.possessions.load_state(data.get("possessions", {}))
         engine.life.load_state(data.get("life", {}))
-        engine.fire_until = data.get("fire_until", engine.clock + environment.life_hours_to_calendar(
-            WORK.FIRE.get("start_life_hours", 8)))
-        engine.last_worked.update({k: v for k, v in data.get("last_worked", {}).items() if k in engine.last_worked})
-        if "last_worked" not in data:
-            engine.last_worked = {name: engine.clock for name in engine.last_worked}
+        # Saves from before core/production.py kept the fire, the places found and who last worked at the top.
+        engine.production.load_state(data.get("production", data))
         engine.meals = dict(data.get("meals", {}))
         engine.quality_levels = {k: float(v) for k, v in data.get("quality_levels", {}).items()}
         engine.quality_shocks = {k: float(v) for k, v in data.get("quality_shocks", {}).items()}
@@ -1820,13 +1353,6 @@ class GameEngine:
         engine.aside_looked = dict(data.get("aside_looked", {}))
         engine.talk_free_at = dict(data.get("talk_free_at", {}))
         engine.talk_what = dict(data.get("talk_what", {}))
-        sites = data.get("sites", [])
-        if isinstance(sites, dict):  # older saves: one place per kind, good for a number of trips
-            sites = [dict(v, kind=k, id=i + 1, loads=float(v.get("trips", 1)), total=float(v.get("trips", 1)),
-                          found=v["until"]) for i, (k, v) in enumerate(sites.items())]
-        engine.sites = [dict(x) for x in sites if x.get("kind") in WORK.SITE_KINDS]
-        engine.spent_sites = [dict(x) for x in data.get("spent_sites", []) if x.get("kind") in WORK.SITE_KINDS]
-        engine.next_site_id = int(data.get("next_site_id", 1 + max((x["id"] for x in engine.sites), default=0)))
         for c in engine.contests.contests if "contest_rules" not in data else []:
             if not c.is_persuasion and not c.awaiting_answer and not engine.contests.is_locked_in(c):
                 for name in (c.challenger, c.defender):  # older saves held contestants busy until the end

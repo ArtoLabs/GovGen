@@ -1,0 +1,47 @@
+{
+  "name": "Gatherer",
+  "icon": "🧺",
+  "volunteer": true,
+  "appointed_by": ["Clan Leader", "Chieftain", "Elder", "Spirit Keeper"],
+  "attributes": ["wisdom", "constitution"],
+  "skill": "gathering",
+  "points": 1,
+  "description": "Collects plants, roots, nuts and berries for the group.",
+  "contributes": {"food": {"amount": 1.0, "category": "plants"}, "water": {"amount": 0.5}},
+  "tasks": {
+    "forage": {
+      "label": "Forage for plants",
+      "life_hours": 2,
+      "skill": "gathering",
+      "yields": [
+        {"item": "berries", "amount": 7},
+        {"item": "roots", "amount": 4, "chance": 0.7},
+        {"item": "herbs", "amount": 1, "chance": 0.15}
+      ],
+      "site": "plants",
+      "chance": 0.3
+    },
+    "gather_wood": {
+      "label": "Gather wood",
+      "life_hours": 1.5,
+      "skill": "gathering",
+      "yields": [{"item": "wood", "amount": 5}],
+      "boost": {"hand_axe": 1.6, "wooden_hand_axe": 1.25},
+      "site": "wood",
+      "also_done_by": ["Firekeeper"]
+    },
+    "gather_stone": {
+      "label": "Gather stone",
+      "life_hours": 1.5,
+      "skill": "gathering",
+      "yields": [{"item": "stone", "amount": 4}, {"item": "flint", "amount": 1, "chance": 0.3}],
+      "site": "stone"
+    },
+    "fetch_water": {
+      "label": "Fetch water from the river",
+      "life_hours": 1,
+      "skill": "gathering",
+      "yields": [{"item": "water", "amount": 8}]
+    }
+  }
+}

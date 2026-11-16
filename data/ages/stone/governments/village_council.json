@@ -1,0 +1,56 @@
+{
+  "key": "village_council",
+  "name": "Village Council",
+  "description": "No single leader: a large council of elders governs together and chooses every specialist. Hard to abuse, slow to act.",
+  "requires": ["Tribal Council"],
+  "reformed_by": {"method": "council_vote", "council": "Elder"},
+  "max_offices_per_player": 1,
+  "member_interfaces": ["infrastructure"],
+  "member_points": 1,
+  "carry_over": {"Clan Leader": "Elder", "Chieftain": "Elder", "Sacred Chief": "Elder", "Spirit Keeper": "Priest"},
+  "offices": {
+    "Elder": {
+      "description": "Governs together with the rest of the council.",
+      "seats": 5,
+      "interfaces": ["leadership", "judicial", "legislative"],
+      "points": 3,
+      "selected_by": {"method": "tribe_vote"},
+      "removed_by": {"method": "tribe_vote"}
+    },
+    "Priest": {
+      "description": "Leads the community's rituals and keeps its sacred places.",
+      "seats": 1,
+      "interfaces": ["religious", "civic_representation"],
+      "points": 3,
+      "selected_by": {"method": "divine_sign", "chance": 0.3},
+      "removed_by": {"method": "council_vote", "council": "Elder"}
+    },
+    "War Leader": {
+      "description": "Leads the community's defense and scouting.",
+      "seats": 1,
+      "interfaces": ["military", "intelligence"],
+      "points": 3,
+      "selected_by": {"method": "council_vote", "council": "Elder"},
+      "removed_by": {"method": "council_vote", "council": "Elder"},
+      "requires": ["Warrior Command"]
+    },
+    "Steward": {
+      "description": "Manages the community's stored food and goods.",
+      "seats": 1,
+      "interfaces": ["economic"],
+      "points": 3,
+      "selected_by": {"method": "council_vote", "council": "Elder"},
+      "removed_by": {"method": "council_vote", "council": "Elder"},
+      "requires": ["Centralized Authority"]
+    }
+  },
+  "statuses": {
+    "Outcast": {
+      "description": "Cast out of the community. Holds no office and has no voice.",
+      "requires": ["Ostracism"],
+      "granted_by": {"method": "council_vote", "council": "Elder"},
+      "revoked_by": {"method": "council_vote", "council": "Elder"},
+      "effects": ["loses_office", "cannot_hold_office", "cannot_vote", "no_member_interfaces"]
+    }
+  }
+}

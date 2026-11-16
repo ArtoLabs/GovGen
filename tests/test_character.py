@@ -94,12 +94,12 @@ class EngineLifeTest(unittest.TestCase):
         e = new_engine()
         alice = become_actor(e, "Alice")
         self.assertIsNotNone(find(e, alice, "care", kind="warm_up"))  # the fire burns at first...
-        e.fire_until = e.clock  # ...until its wood is spent
+        e.production.fire_until = e.clock  # ...until its wood is spent
         self.assertIsNone(find(e, alice, "care", kind="warm_up"))
         self.assertIsNone(e.fire_temperature())
         e.government.occupations["Firekeeper"].append(e.player("Kalani"))
         self.assertIsNone(e.fire_temperature())  # a Firekeeper alone is not a fire
-        e.fire_until = e.clock + 100
+        e.production.fire_until = e.clock + 100
         self.assertIsNotNone(e.fire_temperature())
         self.assertIsNotNone(find(e, alice, "care", kind="warm_up"))
 

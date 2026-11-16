@@ -1,4 +1,4 @@
-"""Life and death (core/life.py, data/life.json): ages of life, illness and healing, death and the dead,
+"""Life and death (core/life.py, data/rules/life.json): ages of life, illness and healing, death and the dead,
 pregnancy and birth, childhood, and playing on after your character dies."""
 import random
 import unittest
@@ -425,7 +425,7 @@ class ScoutAndHealerTest(unittest.TestCase):
     def test_a_found_place_makes_the_next_trip_certain_then_is_used_up(self):
         e = new_engine()
         give_work(e, "Bob")
-        e._add_site("plants", "Cleo", 1, 10 ** 4)
+        e.production._add_site("plants", "Cleo", 1, 10 ** 4)
         p = become_actor(e, "Bob")
         before = sum(p.inventory.count(x) for x in ("berries", "roots")) + \
             sum(e.possessions.ground.get(x, 0) for x in ("berries", "roots"))
@@ -434,7 +434,7 @@ class ScoutAndHealerTest(unittest.TestCase):
         after = sum(p.inventory.count(x) for x in ("berries", "roots")) + \
             sum(e.possessions.ground.get(x, 0) for x in ("berries", "roots"))
         self.assertGreater(after, before)
-        self.assertFalse(e.site_known("plants"))
+        self.assertFalse(e.production.site_known("plants"))
 
     def test_a_healer_goes_to_the_sick(self):
         e = new_engine()

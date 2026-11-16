@@ -1,0 +1,76 @@
+{
+  "key": "city_state",
+  "name": "City-State",
+  "description": "Members elect a council, the council elects a magistrate and the city's officials. Accountable at every level, but every decision needs a vote.",
+  "requires": ["Writing"],
+  "reformed_by": {"method": "tribe_vote"},
+  "max_offices_per_player": 1,
+  "member_interfaces": ["infrastructure"],
+  "member_points": 1,
+  "carry_over": {
+    "Clan Leader": "Magistrate",
+    "Chieftain": "Magistrate",
+    "Sacred Chief": "Magistrate",
+    "Monarch": "Magistrate",
+    "Elder": "Council Member",
+    "Noble": "Council Member",
+    "War Leader": "Commander",
+    "General": "Commander",
+    "Temple Guard Captain": "Commander",
+    "Steward": "Treasurer",
+    "Scribe": "Treasurer",
+    "Spirit Keeper": "Priest",
+    "High Priest": "Priest"
+  },
+  "offices": {
+    "Magistrate": {
+      "description": "Leads the city and presides over its courts for as long as the council allows.",
+      "seats": 1,
+      "interfaces": ["leadership", "judicial"],
+      "points": 6,
+      "selected_by": {"method": "council_vote", "council": "Council Member", "fallback": "tribe_vote"},
+      "removed_by": {"method": "council_vote", "council": "Council Member"}
+    },
+    "Council Member": {
+      "description": "Elected by the members to make the city's laws and choose its officials.",
+      "seats": 5,
+      "interfaces": ["legislative", "civic_representation"],
+      "points": 3,
+      "selected_by": {"method": "tribe_vote"},
+      "removed_by": {"method": "tribe_vote"}
+    },
+    "Commander": {
+      "description": "Leads the city's defense, chosen by the council.",
+      "seats": 1,
+      "interfaces": ["military", "intelligence"],
+      "points": 3,
+      "selected_by": {"method": "council_vote", "council": "Council Member", "fallback": "tribe_vote"},
+      "removed_by": {"method": "council_vote", "council": "Council Member"}
+    },
+    "Treasurer": {
+      "description": "Keeps the city's accounts, chosen by the council.",
+      "seats": 1,
+      "interfaces": ["economic"],
+      "points": 3,
+      "selected_by": {"method": "council_vote", "council": "Council Member", "fallback": "tribe_vote"},
+      "removed_by": {"method": "council_vote", "council": "Council Member"}
+    },
+    "Priest": {
+      "description": "Keeps the city's temples, elected by the members.",
+      "seats": 1,
+      "interfaces": ["religious"],
+      "points": 3,
+      "selected_by": {"method": "tribe_vote"},
+      "removed_by": {"method": "tribe_vote"}
+    }
+  },
+  "statuses": {
+    "Outcast": {
+      "description": "Exiled by vote of the members. Holds no office and has no voice.",
+      "requires": ["Ostracism"],
+      "granted_by": {"method": "tribe_vote"},
+      "revoked_by": {"method": "tribe_vote"},
+      "effects": ["loses_office", "cannot_hold_office", "cannot_vote", "no_member_interfaces"]
+    }
+  }
+}

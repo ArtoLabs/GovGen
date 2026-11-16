@@ -17,14 +17,19 @@ from core.actions import Action
 from core.interfaces import unlock_note
 from innovations.innovation import ALL_INNOVATIONS  # static game data, known to every client
 from world.character import RULES as CHARACTER  # static game data too
-from core.calendar import INNOVATION_COST_MULTIPLIER
 from core.contests import CHALLENGE, kinds_allowed
 from core.occupations import OCCUPATIONS
+from utils import game_data
+from utils.game_data import RULES_DIR
 from utils.data_files import DATA_DIR, load_json
 
-# How eager NPCs are (data/npc.json): they look after their bodies as always, but do everything else far
+# How eager NPCs are (data/rules/npc.json): they look after their bodies as always, but do everything else far
 # less than the player, and turn to politics only when unhappy.
-TUNING = load_json(DATA_DIR / "npc.json") if (DATA_DIR / "npc.json").exists() else {}
+# data/rules/npc.json as it is in every age; an age or a government may change any of it, and TUNING is then
+# refilled in place with the version in force.
+BASE_TUNING = load_json(RULES_DIR / "npc.json")
+TUNING = dict(BASE_TUNING)
+game_data.switchable("npc", BASE_TUNING, lambda r: game_data.fill(TUNING, r))
 from core.contests import CHALLENGE_KINDS, power as contest_power, persuasion_power
 
 from core.life import BASE as _LIFE
@@ -119,7 +124,7 @@ class NPCController(Controller):
     # ------------------------------------------------------------------ #
     @staticmethod
     def _shortage(view, item: str) -> float:
-        """0 when the camp has enough of it (data/work.json stock_targets), up to 1 when it has none."""
+        """0 when the camp has enough of it (data/rules/work.json stock_targets), up to 1 when it has none."""
         from world.items import ITEMS
         camp = view["camp"]
         targets = camp["stock_targets"]
@@ -156,7 +161,7 @@ class NPCController(Controller):
             short, why = 0.0, "does their duty"
         cfg = TUNING.get("work", {})
         if info.get("site"):
-            # A trip is a gamble: worth less where nobody knows of a good place (data/work.json 'trips').
+            # A trip is a gamble: worth less where nobody knows of a good place (data/rules/work.json 'trips').
             luck = cfg.get("luck_weight", 0.6)
             short *= 1 - luck + luck * info.get("chance", 1.0)
             if info.get("site_known"):
@@ -233,7 +238,7 @@ class NPCController(Controller):
         return self._score_work_like(view, action, info) if info else (0.0, "")
 
     # ------------------------------------------------------------------ #
-    # Life: the sick, the dead, and children (data/life.json)
+    # Life: the sick, the dead, and children (data/rules/life.json)
     # ------------------------------------------------------------------ #
     def _score_dispose(self, view, info) -> Tuple[float, str]:
         """The dead must be laid to rest before sickness spreads: someone without other pressing work goes,
@@ -324,15 +329,48 @@ class NPCController(Controller):
             total += item.value * (1 + 2 * want) * s["count"]
         return total
 
+    def _willing_to_part(self, view, stacks) -> float:
+        """Chance (0-1) this NPC hands over `stacks` for nothing (npc.json 'asking'): good-natured people
+        share more readily, and asking for 1 of their 10 is easy where asking for all they have is not.
+        Food or water they badly need themselves they part with less readily still."""
+        from world.items import ITEMS
+        cfg = TUNING.get("asking", {})
+        p = self.persona
+        g = cfg.get("base", 0.85) + cfg.get("compassion", 0.3) * p.compassion - cfg.get("ambition", 0.25) * p.ambition
+        g = max(0.0, min(1.0, g))
+        have: Dict[str, int] = {}
+        for slot in view["possessions"]["inventory"]["slots"]:
+            if slot:
+                have[slot["item"]] = have.get(slot["item"], 0) + slot["count"]
+        needs = view["character"]["needs"]
+        floor, curve = cfg.get("all_of_it", 0.05), cfg.get("curve", 1.5)
+        chance = g
+        for s in stacks:
+            ratio = min(1.0, s["count"] / max(1, have.get(s["item"], 0)))
+            chance *= floor + (1 - floor) * (1 - ratio) ** curve
+            want = max((self._urgency(needs[n]["value"]) for n in ITEMS[s["item"]].use if n in needs), default=0.0)
+            chance *= 1 - cfg.get("own_need", 0.8) * want
+        return chance
+
     def answer_offer(self, view: Dict[str, Any], offer: Dict[str, Any]) -> Optional[Decision]:
-        """Take a trade that leaves them no worse off (a shrewd trader wants a little more)."""
+        """Take a trade that leaves them no worse off (a shrewd trader wants a little more). What a trade
+        (or a plain request) doesn't pay for, they may still give out of goodwill: likelier the smaller
+        a share of what they have it is (npc.json 'asking')."""
         if self.persona is None:
             self.persona = Persona(self._player(view, self.name))
         get, lose = self._worth(view, offer["give"]), self._worth(view, offer["want"])
         margin = 1.0 + 0.2 * self.persona.ambition - 0.15 * self.persona.compassion
-        accept = get >= lose * margin
-        reason = (f"a fair trade ({get:.0f} for {lose:.0f})" if accept and lose else
-                  "a gift" if accept else f"not worth it ({get:.0f} for {lose:.0f})")
+        if get >= lose * margin:
+            reason = f"a fair trade ({get:.0f} for {lose:.0f})" if lose else "a gift"
+            return Decision(Action("answer_trade", {"offer": offer["id"], "accept": True}), reason)
+        unpaid = 1 - get / (lose * margin)
+        chance = 1 - unpaid * (1 - self._willing_to_part(view, offer["want"]))
+        accept = self.rng.random() < chance
+        if not offer["give"]:
+            reason = ("can spare it" if accept else "would rather keep it") + f" ({chance:.0%} likely to share)"
+        else:
+            reason = (f"not quite worth it ({get:.0f} for {lose:.0f}) but agrees anyway" if accept else
+                      f"not worth it ({get:.0f} for {lose:.0f})")
         return Decision(Action("answer_trade", {"offer": offer["id"], "accept": accept}), reason)
 
     @staticmethod
@@ -504,7 +542,7 @@ class NPCController(Controller):
     # ------------------------------------------------------------------ #
     @staticmethod
     def _discontent_of(value: float) -> float:
-        """0 while content, rising to 1 as a satisfaction meter falls (data/npc.json 'discontent')."""
+        """0 while content, rising to 1 as a satisfaction meter falls (data/rules/npc.json 'discontent')."""
         cfg = TUNING.get("discontent", {})
         start, full = cfg.get("starts_below", 50), cfg.get("full_at", 20)
         return max(0.0, min(1.0, (start - value) / max(1.0, start - full)))
@@ -515,7 +553,7 @@ class NPCController(Controller):
 
     def _unrest(self, view, meter: str) -> float:
         """Discontent this NPC is ready to act on: none while they are still being patient with the leaders
-        (data/society.json 'satisfaction.patience'), all of it once their patience has run out."""
+        (data/rules/society.json 'satisfaction.patience'), all of it once their patience has run out."""
         patience = view.get("patience", {}).get(meter)
         return self._discontent(view, meter) * (patience["restless"] if patience else 1.0)
 
@@ -829,8 +867,8 @@ class NPCController(Controller):
         if cfg.get("cheapest_first", True) and cheapest is not None and ALL_INNOVATIONS[name].cost > cheapest:
             return 0.0, ""  # something cheaper comes first
         opens = unlock_note(name).replace("  * opens ", "")
-        # Judge cost against the game's price level (data/time.json innovation_cost_multiplier), not raw points.
-        cost = ALL_INNOVATIONS[name].cost / (50 * INNOVATION_COST_MULTIPLIER)
+        # Judge cost against the game's price level (data/rules/time.json innovation_cost_multiplier), not raw points.
+        cost = ALL_INNOVATIONS[name].cost / TUNING.get("research", {}).get("cost_scale", 650)
         score = (cfg.get("base", 1.0) + self.persona.curiosity * cfg.get("curiosity", 0.8)
                  + (cfg.get("opens", 1.5) if opens else 0) - cost + self._noise(0.5)
                  # Nobody researching anything, or something free to learn: whoever can, queues it.

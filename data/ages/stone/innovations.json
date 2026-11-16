@@ -1,0 +1,27 @@
+{
+  "_comment": "The innovations of this age. 'cost' is the innovation points it takes to research (times this age's 'innovation_cost_multiplier' in age.json, normally 1). 'interface': the branch of government that may research it (data/rules/interfaces.json). 'prerequisites' must come from this age or an earlier one.",
+  "innovations": [
+    {"name": "Hereditary Rule", "icon": "👑", "interface": "leadership", "cost": 325, "prerequisites": ["Chieftainship"], "description": "Power passed through family lineage."},
+    {"name": "Warrior Command", "icon": "📯", "interface": "leadership", "cost": 325, "prerequisites": ["Hierarchy"], "description": "Organized leadership for armed forces."},
+    {"name": "Centralized Authority", "icon": "🏯", "interface": "leadership", "cost": 260, "prerequisites": ["Hierarchy"], "description": "Unified control over several groups."},
+    {"name": "Divine Right", "icon": "🌟", "interface": "leadership", "cost": 325, "prerequisites": ["Chieftainship"], "description": "Leaders chosen by divine will."},
+    {"name": "Distribution", "icon": "🥖", "interface": "leadership", "cost": 325, "prerequisites": ["Chieftainship", "Storage", "Oral History", "Forest Gardening"], "description": "Leaders distribute stored goods to the community."},
+    {"name": "Kinship Lineages", "icon": "🌳", "interface": "leadership", "cost": 325, "prerequisites": ["Chieftainship", "Hierarchy", "Hereditary Rule"], "description": "Recognized family lines that shape status and who may lead."},
+    {"name": "Personal Adornment", "icon": "💍", "interface": "leadership", "cost": 325, "prerequisites": ["Chieftainship", "Symbolism", "Ceremonies"], "description": "Begins to create a separation of classes."},
+    {"name": "Warriors", "icon": "🪓", "interface": "military", "cost": 260, "prerequisites": ["Warrior Command"], "description": "Ability to recognize warriors within the community."},
+    {"name": "Tactical Coordination", "icon": "🧭", "interface": "military", "cost": 195, "prerequisites": ["Warriors"], "description": "Warriors can perform more complex coordinated tactics."},
+    {"name": "Weapon Crafting", "icon": "🔨", "interface": "military", "cost": 195, "prerequisites": ["Toolmaking", "Warriors"], "description": "Advanced tools for combat."},
+    {"name": "Fortifications", "icon": "🧱", "interface": "military", "cost": 325, "prerequisites": ["Toolmaking", "Warriors", "Domestication"], "description": "Defensive structures like walls."},
+    {"name": "Battle Formations", "icon": "🏹", "interface": "military", "cost": 234, "prerequisites": ["Tactical Coordination"], "description": "Coordinated warrior maneuvers."},
+    {"name": "Information Gathering", "icon": "👂", "interface": "intelligence", "cost": 234, "prerequisites": ["Language"], "description": "Systematic spying and reporting."},
+    {"name": "Scouting Networks", "icon": "🔭", "interface": "intelligence", "cost": 260, "prerequisites": ["Information Gathering"], "description": "Organized reconnaissance teams."},
+    {"name": "Domestication", "icon": "🐄", "interface": "economic", "cost": 130, "prerequisites": ["Tribalism", "Forest Gardening"], "description": "The taming of animals and plants."},
+    {"name": "Property", "icon": "🏠", "interface": "economic", "cost": 130, "prerequisites": ["Domestication"], "description": "Exclusive claim to objects."},
+    {"name": "Trade", "icon": "📦", "interface": "economic", "cost": 130, "prerequisites": ["Barter System", "Distribution"], "description": "Trade between communities."},
+    {"name": "Token Exchange", "icon": "🪙", "interface": "economic", "cost": 130, "prerequisites": ["Trade"], "description": "A precursor to money."},
+    {"name": "Storage", "icon": "🏺", "interface": "infrastructure", "cost": 260, "prerequisites": ["Toolmaking", "Domestication", "Sustenance Gardening"], "description": "Keeps food longer."},
+    {"name": "Irrigation", "icon": "💧", "interface": "infrastructure", "cost": 260, "prerequisites": ["Toolmaking", "Sustenance Gardening"], "description": "Water management for agriculture."},
+    {"name": "Agriculture", "icon": "🌾", "interface": "infrastructure", "cost": 260, "prerequisites": ["Toolmaking", "Irrigation"], "description": "Producing more food than is needed to survive."},
+    {"name": "Metalworking", "icon": "🔩", "interface": "infrastructure", "cost": 390, "prerequisites": ["Stone Cutting", "Agriculture"], "description": "Smelting and shaping soft metals such as copper."}
+  ]
+}

@@ -1,4 +1,4 @@
-"""How well the society works and how its members feel about it (data/society.json).
+"""How well the society works and how its members feel about it (data/rules/society.json).
 
 Three layers, each built on the one before:
   Work quality   How well one person does one job or office (0-100): their attributes and skill,
@@ -21,6 +21,8 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from core import work as work_rules
 from core.occupations import OCCUPATIONS
+from utils import game_data
+from utils.game_data import RULES_DIR
 from utils.data_files import DATA_DIR, load_json, require
 from world.character import RULES as CHARACTER
 
@@ -28,15 +30,42 @@ if TYPE_CHECKING:
     from core.government import Government
     from world.player import Player
 
-_data = load_json(DATA_DIR / "society.json") if (DATA_DIR / "society.json").exists() else {}
-WORK: Dict[str, Any] = _data.get("work_quality", {})
-OFFICE_DEFAULT: Dict[str, Any] = _data.get("office_quality_default", {"attributes": {"charisma": 1.0}, "skill": None})
-SATISFACTION: Dict[str, Any] = _data.get("satisfaction", {})
-LEADERSHIP_TRAINING: Dict[str, Any] = _data.get("leadership_training", {})
-JOB_LOSS: Dict[str, Any] = SATISFACTION.get("job_loss", {})
-INPUT_VALUES: Dict[str, Dict[str, float]] = SATISFACTION.get("input_values", {})
-POSITIONS: Dict[str, Any] = SATISFACTION.get("positions", {})
-SUPPLY_CURVE: float = float(_data.get("supply_curve", 0.8))
+# data/rules/society.json as it is in every age. An age (data/ages/<age>/rules/society.json) or a government
+# (its file's "rules": {"society": {...}}) may change any of it, add qualities and meters, or drop them; use_rules()
+# below puts the version in force into the tables that follow, in place.
+BASE_RULES: Dict[str, Any] = load_json(RULES_DIR / "society.json")
+_data: Dict[str, Any] = BASE_RULES
+WORK: Dict[str, Any] = {}
+OFFICE_DEFAULT: Dict[str, Any] = {}
+SATISFACTION: Dict[str, Any] = {}
+LEADERSHIP_TRAINING: Dict[str, Any] = {}
+JOB_LOSS: Dict[str, Any] = {}
+INPUT_VALUES: Dict[str, Dict[str, float]] = {}
+POSITIONS: Dict[str, Any] = {}
+PATIENCE: Dict[str, Any] = {}
+HARDSHIP: Dict[str, Any] = {}
+JOB_RANK: Dict[str, Any] = {}
+QUALITY_EVENTS: Dict[str, Any] = {}
+SUPPLY_CURVE: float = 0.8
+
+
+def _fill_tables(r: Dict[str, Any]):
+    global _data, SUPPLY_CURVE
+    _data = r
+    fill = game_data.fill
+    fill(WORK, r.get("work_quality", {}))
+    fill(OFFICE_DEFAULT, r.get("office_quality_default", {"attributes": {"charisma": 1.0}, "skill": None}))
+    fill(SATISFACTION, r.get("satisfaction", {}))
+    fill(LEADERSHIP_TRAINING, r.get("leadership_training", {}))
+    fill(QUALITY_EVENTS, r.get("quality_events", {}))
+    # The parts of 'satisfaction' with a table of their own stay one and the same object as that part.
+    for table, key in ((JOB_LOSS, "job_loss"), (INPUT_VALUES, "input_values"), (POSITIONS, "positions"),
+                       (PATIENCE, "patience"), (HARDSHIP, "hardship"), (JOB_RANK, "job_rank")):
+        SATISFACTION[key] = fill(table, SATISFACTION.get(key, {}))
+    SUPPLY_CURVE = float(r.get("supply_curve", 0.8))
+
+
+_fill_tables(BASE_RULES)
 
 
 @dataclass
@@ -51,7 +80,7 @@ class QualityDef:
     sources: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     requires: List[str] = field(default_factory=list)
     on_hand: Dict[str, Any] = field(default_factory=dict)  # share of the value from what the tribe holds
-    sick: Dict[str, Any] = field(default_factory=dict)  # share of the value from how few are ill (data/life.json)
+    sick: Dict[str, Any] = field(default_factory=dict)  # share of the value from how few are ill (data/rules/life.json)
     events: Dict[str, float] = field(default_factory=dict)  # event ('death') -> points it adds at once (fading)
     uses: List[str] = field(default_factory=list)  # style 'use': what raises it ('care:warm_up')
     per_use: float = 0.0               # style 'use': points each use adds
@@ -90,12 +119,24 @@ def _check_curve(points, where: str):
     require(ok, where, "'curve' must be a list of [x, multiplier] pairs")
 
 
+def _job_sources() -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """What every occupation adds to each quality, from the occupations' own files ('contributes'):
+    {quality: {occupation: spec}}. Offices add theirs when the governments are loaded (register_offices)."""
+    out: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for occ in OCCUPATIONS.values():
+        for quality, spec in occ.contributes.items():
+            out.setdefault(quality, {})[occ.name] = dict(spec)
+    return out
+
+
 def _load():
     qualities = {}
+    job_sources = _job_sources()
     for key, q in _data.get("qualities", {}).items():
         if key.startswith("_"):
             continue
         where = f"society.json quality '{key}'"
+        q = {**q, "sources": {**q.get("sources", {}), **job_sources.get(key, {})}}
         require(q.get("style") in ("supply", "offices", "use"), where, "'style' must be supply, offices or use")
         require(q.get("style") != "use" or q.get("uses"), where, "a 'use' quality needs 'uses' (e.g. care:warm_up)")
         for src in q.get("sources", {}):
@@ -134,6 +175,12 @@ def _load():
                 require(name in MULTIPLIERS, where, f"unknown multiplier '{name}' (known: {', '.join(MULTIPLIERS)}, "
                                                     "working_now:<job>)")
             _check_curve(spec.get("curve"), f"{where} multiplier '{name}'")
+        m = {**m, "multipliers": {**m.get("multipliers", {}),
+                                   **{f"working_now:{o.name}": dict(o.speeds_contentment[key])
+                                      for o in OCCUPATIONS.values() if key in o.speeds_contentment}}}
+        for name, spec in m["multipliers"].items():
+            if name.startswith("working_now:"):
+                _check_curve(spec.get("curve"), f"{where} multiplier '{name}'")
         meters[key] = MeterDef(key, m.get("name", key), m.get("inputs", {}), m.get("bonus", {}),
                                [float(x) for x in m.get("variety_rates", [])], bool(m.get("expectations", True)),
                                float(m.get("rise_per_day", drift)), float(m.get("fall_per_day", drift)),
@@ -169,15 +216,72 @@ def _update_order(meters: Dict[str, MeterDef]) -> List[str]:
     return order
 
 
-QUALITIES, METERS = _load()
-UPDATE_ORDER: List[str] = _update_order(METERS)
+QUALITIES: Dict[str, QualityDef] = {}
+METERS: Dict[str, MeterDef] = {}
+UPDATE_ORDER: List[str] = []
+_government_types: Dict[str, Any] = {}  # set by register_offices() once the governments are loaded
 
-PATIENCE: Dict[str, Any] = SATISFACTION.get("patience", {})
-for _key, _spec in PATIENCE.get("meters", {}).items():
-    _where = f"society.json satisfaction.patience '{_key}'"
-    require(_key in METERS, _where, "unknown meter")
-    require(_spec.get("grace_life_hours", 0) >= 0 and _spec.get("build_up_life_hours", 1) > 0, _where,
-            "'grace_life_hours' must be 0 or more and 'build_up_life_hours' above 0")
+
+def _add_offices():
+    """What offices add, from the government files: an office's 'contributes' ({quality: spec}) becomes a
+    source of that quality, and its 'speeds_contentment' ({meter: {curve}}) a multiplier of that meter while
+    a holder works the office. (A quality or meter this age doesn't have is left out.)"""
+    for g in _government_types.values():
+        for office in g.offices.values():
+            for quality, spec in office.contributes.items():
+                if quality in QUALITIES:
+                    QUALITIES[quality].sources[f"office:{office.name}"] = dict(spec)
+            for meter, spec in office.speeds_contentment.items():
+                if meter in METERS:
+                    METERS[meter].multipliers[f"working_now:office:{office.name}"] = dict(spec)
+
+
+def use_rules(r: Dict[str, Any]):
+    """Put these society rules in force (utils/game_data.py RuleSet does this for the game being played):
+    every table of this module is refilled in place, and the qualities and meters are built again."""
+    _fill_tables(r)
+    qualities, meters = _load()
+    game_data.fill(QUALITIES, qualities)
+    game_data.fill(METERS, meters)
+    UPDATE_ORDER[:] = _update_order(METERS)
+    for key, spec in PATIENCE.get("meters", {}).items():
+        where = f"society.json satisfaction.patience '{key}'"
+        require(key in METERS, where, "unknown meter")
+        require(spec.get("grace_life_hours", 0) >= 0 and spec.get("build_up_life_hours", 1) > 0, where,
+                "'grace_life_hours' must be 0 or more and 'build_up_life_hours' above 0")
+    _add_offices()
+
+
+use_rules(BASE_RULES)
+# Every quality and meter of any age: what occupations and offices may name in 'contributes' and
+# 'speeds_contentment' (an occupation of a later age may feed a quality only that age has).
+KNOWN_QUALITIES = {k for v in game_data.all_versions("society", BASE_RULES)
+                   for k in game_data.public(v.get("qualities", {}))}
+KNOWN_METERS = {k for v in game_data.all_versions("society", BASE_RULES)
+                for k in game_data.public(v.get("satisfaction", {}).get("meters", {}))}
+for _occ in OCCUPATIONS.values():
+    for _quality in _occ.contributes:
+        require(_quality in KNOWN_QUALITIES, f"occupation '{_occ.name}' contributes",
+                f"unknown society quality '{_quality}' (known: {', '.join(sorted(KNOWN_QUALITIES))})")
+    for _meter in _occ.speeds_contentment:
+        require(_meter in KNOWN_METERS, f"occupation '{_occ.name}' speeds_contentment",
+                f"unknown contentment meter '{_meter}'")
+game_data.switchable("society", BASE_RULES, use_rules)
+
+
+def register_offices(government_types: Dict[str, Any]):
+    """The governments are loaded (core/government_types.py): check what their offices add, and add it."""
+    global _government_types
+    for g in government_types.values():
+        for office in g.offices.values():
+            where = f"{g.key}.json office '{office.name}'"
+            for quality in office.contributes:
+                require(quality in KNOWN_QUALITIES, f"{where} contributes", f"unknown society quality '{quality}'")
+            for meter, spec in office.speeds_contentment.items():
+                require(meter in KNOWN_METERS, f"{where} speeds_contentment", f"unknown contentment meter '{meter}'")
+                _check_curve(spec.get("curve"), f"{where} speeds_contentment '{meter}'")
+    _government_types = government_types
+    _add_offices()
 
 
 def _clamp(v: float, lo: float = 0.0, hi: float = 100.0) -> float:
@@ -601,7 +705,6 @@ def update_satisfaction(people: List['Player'], gov: 'Government', qualities, ov
     return events
 
 
-HARDSHIP: Dict[str, Any] = SATISFACTION.get("hardship", {})
 
 
 def in_distress(p: 'Player') -> bool:
@@ -711,7 +814,6 @@ def job_loss(person: 'Player', how: str, people: List['Player']) -> Dict[str, fl
     return {METERS[k].name: n for k, n in spec.get("hit", {}).items() if k in METERS}
 
 
-JOB_RANK: Dict[str, Any] = SATISFACTION.get("job_rank", {})
 
 
 def _research_steps(name: str, memo: Dict[str, int]) -> int:
@@ -792,7 +894,6 @@ def leadership_practice(worked: float, direction: float) -> float:
     return t.get("while_working", 1.0) * worked + t.get("tribe_share", 1.0) * direction
 
 
-QUALITY_EVENTS: Dict[str, Any] = _data.get("quality_events", {})
 
 
 def event_points(event: str) -> Dict[str, float]:

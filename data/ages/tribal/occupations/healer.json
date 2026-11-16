@@ -1,0 +1,31 @@
+{
+  "name": "Healer",
+  "icon": "🌿",
+  "appointed_by": ["Clan Leader", "Spirit Keeper", "Elder", "Priest", "High Priest"],
+  "attributes": ["wisdom", "intelligence"],
+  "skill": "healing",
+  "points": 1,
+  "description": "Tends wounds and sickness with herbs and care.",
+  "also_trains": {"gathering": 0.3},
+  "requires": ["Herbalism"],
+  "contributes": {"care": {"amount": 1.0}},
+  "tasks": {
+    "gather_herbs": {
+      "label": "Gather healing herbs",
+      "life_hours": 2,
+      "skill": "healing",
+      "yields": [{"item": "herbs", "amount": 3}],
+      "site": "herbs"
+    }
+  },
+  "recipes": {
+    "poultice": {
+      "requires": ["Herbalism"],
+      "life_hours": 1,
+      "skill": "healing",
+      "inputs": [{"item": "herbs", "count": 2}],
+      "output": {"item": "poultice", "count": 1},
+      "speed_tools": {}
+    }
+  }
+}

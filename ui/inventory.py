@@ -102,7 +102,8 @@ class InventoryScreen(ModalScreen):
 
     def on_mount(self):
         self.query_one("#inv_detail").border_title = "Item"
-        self.query_one("#inv_ground").border_title = "Camp store"
+        from ui.model import term
+        self.query_one("#inv_ground").border_title = term("store_name").capitalize()
         self.query_one("#inv_offers").border_title = "Trade offers"
         if not self.own:
             self.query_one("#inv_ground").display = False

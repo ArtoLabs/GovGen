@@ -1,8 +1,111 @@
 # Game data
 
-Everything about ages, innovations and governments lives here. The engine validates these files at
-startup and stops with a message naming the file and field if something is wrong. Every number that
-tunes the game sits in one of these files; the code only holds fallbacks equal to them.
+Everything the game is made of lives here. The engine validates these files at startup and stops with a
+message naming the file and field if something is wrong. Every number that tunes the game sits in one of
+these files; the code only holds fallbacks equal to them.
+
+## How it is laid out: one folder per age
+
+```
+data/
+  settings.json                 how the program runs (speed, seed)
+  players.json                  the people a new game starts with
+  rules/                        how things work in EVERY age
+    character.json  time.json  world.json  society.json  life.json  work.json
+    items.json  occupations.json  contests.json  npc.json  interfaces.json
+  ages/
+    tribal/                     everything that belongs to the Tribal Age
+      age.json                  order, what opens it, what it calls things, the store panel, what a game starts with
+      innovations.json          what can be researched, and what each COSTS
+      items.json                the things of the age
+      occupations/              one file per occupation, holding everything about it
+        gatherer.json  scout.json  hunter.json  toolmaker.json  ...
+      work.json                 work that is nobody's occupation (offices' work, work anyone may do),
+                                the age's site kinds and stock targets
+      governments/tribal.json   the age's forms of government, with their offices
+      rules/life.json           this age's changes to rules/life.json (any other rules file works the same)
+    stone/   age.json  innovations.json  governments/...
+    metal/   age.json  innovations.json  governments/...
+```
+
+The engine reads whatever age folders it finds (`utils/game_data.py` is the only code that knows this
+layout). **Adding an age is adding a folder**: an `age.json` with the next `order`, and whichever of the
+other files the age needs. Nothing in the code names an age, an occupation, an office or an item.
+
+**What adds up and what is replaced.** Content adds up: a later age keeps the innovations, items,
+occupations, work and governments of earlier ages and adds its own (a name may be used only once across all
+ages). An age's `terms` and `store_panel` are inherited by later ages until one sets its own.
+
+**Rules can change with the age.** The files in `rules/` hold the numbers for every age. An age changes any
+of them by repeating just those keys in a file of the same name in its own `rules/` folder: the change
+applies from the moment the age is reached, and later ages lay theirs on top. A government does the same
+with `"rules": {"<file>": {...}}` in its own file, while it is in place.
+
+| File an age or government can change | For example |
+|---|---|
+| `work.json` | trip and find chances, yields, how long the fire burns |
+| `life.json` | illness, lifespans, births, childhood, who the healers are |
+| `society.json` | a quality's weight, a new quality or contentment meter, how fast contentment moves, job-loss resentment |
+| `npc.json` | how eager NPCs are for politics, research, appointing |
+| `contests.json` | persuasion and challenge numbers, a new kind of challenge |
+| `character.json` | how fast needs fall, health, care actions, training speed |
+| `world.json` | climate, how warm a fire is |
+
+So `data/ages/stone/rules/character.json` containing `{"needs": {"food": {"decay_per_day": 90}}}` makes
+people get hungry more slowly from the Stone Age on, and changes nothing else. Skills and attributes an
+age adds in its `rules/character.json` are known from the start of the game (everyone has 0 in a skill
+nobody can use yet), so occupations of any age can name them. Every age's version is checked at startup.
+
+`time.json`, `items.json`, `occupations.json` and `interfaces.json` are the same in every age: an age
+folder that tries to override one is refused at startup rather than silently ignored.
+
+### One occupation, one file
+`ages/<age>/occupations/<name>.json` holds the whole occupation:
+
+| Part | What it says |
+|---|---|
+| `name`, `icon`, `description` | What it is |
+| `requires` | Innovations needed before anyone can take it up |
+| `appointed_by`, `volunteer`, `seats` | Who gives the job (office names of any government) or whether people may take it themselves |
+| `attributes`, `skill`, `also_trains`, `points`, `interfaces`, `needs_tools`, `provides`, `rank` | What makes someone good at it, what it trains, the innovation points it earns, what it lets holders research |
+| `contributes` | What a holder adds to the society's qualities: `{"food": {"amount": 1.0, "category": "plants"}}` (the qualities themselves are in `rules/society.json`) |
+| `speeds_contentment` | Contentment meters that rise faster while holders are at work: `{"safety": {"curve": [[0, 1.0], [1, 1.5]]}}` |
+| `tasks` | Its work, the choices under W: how long each takes, what it yields, its chances, tools, sites (the fields are described under "Work" below). A task also done by another occupation lists it in `also_done_by` |
+| `recipes` | What it crafts: inputs, output, time |
+
+Offices have `contributes` and `speeds_contentment` too, in their government file.
+
+### `ages/<age>/age.json`
+| Field | Meaning |
+|---|---|
+| `order` | Ages come in this order (the folder name is the age's key) |
+| `name`, `description` | Shown when the age arrives |
+| `requires` | Innovations (of earlier ages) that must all be discovered to enter it |
+| `starting_innovations` | First age: what is known at the start |
+| `government_on_arrival` | On entering, the government becomes the first of these whose `requires` are researched, else the last |
+| `innovation_cost_multiplier` | Multiplies every cost in this age's `innovations.json` (1: the cost in the file is the cost in the game) |
+| `terms` | What things are called: `society` (tribe), `members` (the panel on the right: Tribe), `member` (Tribe member), `store` (the top bar: Camp), `store_name` (camp store), `home` (camp). A government file may set its own `terms` |
+| `store_panel` | What the top bar counts of the shared store, left to right: groups of `items` and/or `kinds`, with a `label` and `icon` |
+| `starting_inventory`, `starting_store` | First age: what everyone carries and what the shared store holds in a new game |
+
+### Where the old files went
+| Before | Now |
+|---|---|
+| `ages.json` | one `ages/<age>/age.json` per age |
+| `innovations/<age>.json` | `ages/<age>/innovations.json` (costs are now the real cost; the old x13 `innovation_cost_multiplier` of `time.json` is worked in) |
+| `governments/<key>.json` | `ages/<age>/governments/<key>.json` (no `age` field: the folder says it) |
+| `occupations.json` | `ages/<age>/occupations/<name>.json`; `max_per_player` and `office_is_work` in `rules/occupations.json` |
+| `work.json` tasks and recipes | inside the occupation that does them; the rest in `ages/<age>/work.json` |
+| `work.json` numbers (trips, sites, fire, yields) | `rules/work.json` |
+| `work.json` `sites.kinds`, `stock_targets`, `craft_speed_tools` | `ages/<age>/work.json` (`site_kinds`, `stock_targets`, `craft_speed_tools`) |
+| `items.json` items | `ages/<age>/items.json`; pack size, keeping and trade rules in `rules/items.json` |
+| `items.json` `camp_summary`, `starting_inventory`, `camp_store` | `ages/<age>/age.json` (`store_panel`, `starting_inventory`, `starting_store`) |
+| `society.json` quality `sources`, `working_now:<job>` multipliers | each occupation's (or office's) `contributes` and `speeds_contentment` |
+| `life.json` `ages` | `ages/<age>/rules/life.json` (who the healers are is there too: `treatment.healers`) |
+| the other files | `rules/<same name>.json` |
+
+The sections below still describe every field; where they say `work.json`, `items.json`,
+`occupations.json` and so on, the table above says where that part now lives.
 
 ## Where to tweak what
 
@@ -20,7 +123,7 @@ tunes the game sits in one of these files; the code only holds fallbacks equal t
 | Children's play and study and what each does for them | `life.json` → `childhood.activities` |
 | How much less children eat and drink | `life.json` → `need_factors` |
 | Life stages and aging (attributes changing with age) | `life.json` → `life_stages`, `aging` |
-| Any of the above for a later age, a government, or after a discovery | `life.json` → `ages`, `governments`, `innovations` |
+| Any of the above for a later age, a government, or after a discovery | `ages/<age>/rules/life.json`; a government file's `rules.life`; `rules/life.json` → `innovations` |
 | Whom you play on as when your character dies | `life.json` → `successor` |
 | How much people lying ill lower the Care quality (so leaders appoint a Healer) | `society.json` → `qualities.care.sick` |
 | How NPCs look after their health, lay the dead to rest, and how NPC children choose play and study | `npc.json` → `health`, `remains`, `childhood` |
@@ -41,7 +144,10 @@ tunes the game sits in one of these files; the code only holds fallbacks equal t
 | Research speed, the length of a year and of a day-night cycle | `time.json` |
 | What work and crafting take and produce, how lucky a trip is, how far the fire burns | `work.json` |
 | Items, stack sizes, what food restores, tool breakage, slots in a pack | `items.json` |
-| What the top bar counts of the camp store | `items.json` → `camp_summary` |
+| What the top bar counts of the shared store (wood, food, water, minerals, medicine, tools...) | `ages/<age>/age.json` → `store_panel` |
+| What the panels call things (Tribe, Camp, camp store...) | `ages/<age>/age.json` → `terms` (or a government file's `terms`) |
+| How many innovation points an innovation costs | `ages/<age>/innovations.json` → that innovation's `cost` |
+| What an occupation does: its tasks, their yields, chances, times and tools | `ages/<age>/occupations/<name>.json` → `tasks`, `recipes` |
 | How much going hungry pulls down Food contentment | `society.json` → `satisfaction.meters.food.hunger` |
 | How fast tools wear out (uses before they break) and their chance to break | `items.json` → `items.<tool>.tool` (`uses`, `breaks`) |
 | How long making a tool takes, and how much tools speed it up | `work.json` → `recipes.<recipe>.life_hours`, `craft_speed_tools` (or a recipe's own `speed_tools`) |
@@ -50,7 +156,7 @@ tunes the game sits in one of these files; the code only holds fallbacks equal t
 | Which research opens which tools; what tools are made of | `work.json` → `recipes` (`requires`, `inputs`) |
 | Who may fetch water (or do any task) | `work.json` → `tasks.<task>.occupations` |
 | Jobs: who appoints, what they need, caps (none by default) | `occupations.json` |
-| Which government a new age brings (automatically, by what has been researched) | `ages.json` → `government_on_arrival` |
+| Which government a new age brings (automatically, by what has been researched) | `ages/<age>/age.json` → `government_on_arrival` |
 | The hierarchy of appointments (who may move, dismiss or release whose appointees) | `governments/*.json` → `offices.<office>.authority` (default: its points) |
 | What being dismissed or moved costs in contentment | `society.json` → `satisfaction.job_loss` |
 | The hierarchy of work, and how a step up or down feels | `society.json` → `satisfaction.job_rank`; `rank` on an occupation or office overrides |
@@ -179,9 +285,9 @@ consider it every `npc_check_days` when a ballot or challenge waits on them, els
 The calendar and how long things take, in game time: `days_per_year` (360) and `seasons`;
 `action_hours` (how long each kind of action keeps a player busy); `wait_days` (the waiting options);
 how long nominations, election voting and yes/no motions stay open (`nomination_days`, `voting_days`,
-`motion_days`); `reform_cooldown_years`; and `innovation_cost_multiplier`, which scales every
-innovation's `cost` (6 = the Stone Age takes roughly 35-80 game years). Raise it for a slower climb
-through the ages, lower it for a faster one. Innovation points flow in daily (1/360 of each office's
+`motion_days`); and `reform_cooldown_years`. How long the climb through the ages takes is set by each
+innovation's `cost` in its age's `innovations.json` (an age's `innovation_cost_multiplier` in `age.json`
+scales all of that age's costs at once: raise it for a slower climb, lower it for a faster one). Innovation points flow in daily (1/360 of each office's
 yearly `points` per day) and go into whatever is being researched.
 
 `news_travel_days`: someone resting at home hears that an election or vote opened within this many
@@ -385,30 +491,32 @@ Not game rules but how you play: `npc_detail` (`full` or `summary`), `seed`,
 `real_seconds_per_game_year` (300 = five minutes per game year at normal speed), `playback_speed` and
 the `playback_speeds` F5 cycles through.
 
-## `ages.json`
+## `ages/<age>/age.json` (was `ages.json`)
 Ordered list of ages. An age is reached when every innovation in its `requires` is discovered (and all
 earlier ages are reached). The first age lists `starting_innovations`. An age's `requires` must come
 from earlier ages, otherwise it could never be reached.
 
-## `innovations/<age>.json`
-One file per age; `age` must match a key in `ages.json`.
+## `ages/<age>/innovations.json`
+One file per age, in the age's folder.
 
 | Field | Meaning |
 |---|---|
 | `name` | Unique name |
 | `interface` | Which role interface can research it (`leadership`, `legislative`, `judicial`, `military`, `intelligence`, `economic`, `infrastructure`, `religious`, `civic_representation`) |
-| `cost` | Innovation points needed |
+| `cost` | Innovation points needed (times the age's `innovation_cost_multiplier`, normally 1) |
 | `prerequisites` | Innovations that must be discovered first (same age or earlier) |
 | `description` | Shown in the innovation list |
 | `icon` | Optional; defaults to the interface's icon |
 
-## `governments/<key>.json`
+## `ages/<age>/governments/<key>.json`
 One government type per file.
 
 | Field | Meaning |
 |---|---|
 | `key`, `name`, `description` | Identity |
-| `age` | Age in which this government becomes available |
+| (folder) | The age whose `governments/` folder the file is in is the age in which it becomes available |
+| `terms` | Optional: this government's own words for things (see `age.json` `terms`) |
+| `rules` | Optional: its changes to the rules while it is in place: `{"work": {...}, "life": {...}}` |
 | `requires` | Extra innovations needed beyond reaching the age |
 | `reformed_by` | How this government can be changed into another: `appointment` (the `appointer` decrees it alone; if that seat is empty, members vote), `tribe_vote` or `council_vote` (a yes/no vote anyone in the electorate can call) |
 | `max_offices_per_player` | How many offices one player may hold at once |
